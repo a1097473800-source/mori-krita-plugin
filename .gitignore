@@ -1,0 +1,6 @@
+__pycache__/
+*.py[cod]
+webview-host/build/
+releases/
+qa-output/
+.DS_Store

@@ -1,0 +1,32 @@
+{
+    "schemaVersion":  1,
+    "hostVersion":  "0.4.6",
+    "shutdownProtocol":  2,
+    "files":  [
+                  {
+                      "name":  "MoriWebHost.exe",
+                      "size":  25600,
+                      "sha256":  "82c5d5140795627a40ec4b705328ac98b6ae7a6d028e53b8e7e064a1d048476c"
+                  },
+                  {
+                      "name":  "Microsoft.Web.WebView2.Core.dll",
+                      "size":  703328,
+                      "sha256":  "acdd517b951829f763d1255f32df1e6a936cb8623a7ebff6b8b24172dede6bd6"
+                  },
+                  {
+                      "name":  "Microsoft.Web.WebView2.WinForms.dll",
+                      "size":  38792,
+                      "sha256":  "c66437f80886aecf074804b61af4cc10ad90a95310c8e0a717f31ea377c26b03"
+                  },
+                  {
+                      "name":  "WebView2Loader.dll",
+                      "size":  194912,
+                      "sha256":  "d3fce90bdeecb08596e377dea6a316354dd8949e32ff09b89d51be00c14e21b6"
+                  },
+                  {
+                      "name":  "WebView2-LICENSE.txt",
+                      "size":  1487,
+                      "sha256":  "0af8f1b807512aae39c2ac1aa4d0cae65cabecb6fd554b8439a5162a0d6eca55"
+                  }
+              ]
+}

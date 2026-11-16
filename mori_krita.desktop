@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Service
+ServiceTypes=Krita/PythonPlugin
+X-KDE-Library=mori_krita
+X-Python-2-Compatible=false
+X-Krita-Manual=Manual.html
+Name=Mori Canvas
+Name[zh_CN]=Mori 画布
+Comment=Native selection assistant and Mori canvas with Krita layer integration
+Comment[zh_CN]=原生选区修改栏、Mori 智能体与图层联动
+

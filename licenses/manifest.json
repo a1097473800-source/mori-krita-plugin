@@ -1,0 +1,393 @@
+{
+  "collectedAt": "2026-10-30",
+  "scope": "Licenses for runtime and browser bundles in the Windows x64 portable app. Node and font texts downloaded only as data; all npm texts copied unchanged from installed package roots.",
+  "entries": [
+    {
+      "name": "@xyflow/react",
+      "version": "12.12.0",
+      "declaredLicense": "MIT",
+      "role": "frontend bundled dependency",
+      "source": "https://www.npmjs.com/package/@xyflow/react/v/12.12.0",
+      "installedLicensePaths": [
+        "node_modules/.pnpm/@xyflow+react@12.12.0_@type_a2dc164871d419910c9e7025366b0809/node_modules/@xyflow/react/LICENSE"
+      ],
+      "licenseFiles": [
+        "xyflow-react-12.12.0-LICENSE"
+      ]
+    },
+    {
+      "name": "classcat",
+      "version": "5.0.5",
+      "declaredLicense": "MIT",
+      "role": "frontend bundled dependency",
+      "source": "https://www.npmjs.com/package/classcat/v/5.0.5",
+      "installedLicensePaths": [
+        "node_modules/.pnpm/classcat@5.0.5/node_modules/classcat/LICENSE.md"
+      ],
+      "licenseFiles": [
+        "classcat-5.0.5-LICENSE.md"
+      ]
+    },
+    {
+      "name": "zustand",
+      "version": "4.5.7",
+      "declaredLicense": "MIT",
+      "role": "frontend bundled dependency",
+      "source": "https://www.npmjs.com/package/zustand/v/4.5.7",
+      "installedLicensePaths": [
+        "node_modules/.pnpm/zustand@4.5.7_@types+react@19.3.0_react@19.3.1/node_modules/zustand/LICENSE"
+      ],
+      "licenseFiles": [
+        "zustand-4.5.7-LICENSE"
+      ]
+    },
+    {
+      "name": "use-sync-external-store",
+      "version": "1.7.0",
+      "declaredLicense": "MIT",
+      "role": "frontend bundled dependency",
+      "source": "https://www.npmjs.com/package/use-sync-external-store/v/1.7.0",
+      "installedLicensePaths": [
+        "node_modules/.pnpm/use-sync-external-store@1.7.0_react@19.3.1/node_modules/use-sync-external-store/LICENSE"
+      ],
+      "licenseFiles": [
+        "use-sync-external-store-1.7.0-LICENSE"
+      ]
+    },
+    {
+      "name": "@xyflow/system",
+      "version": "0.0.83",
+      "declaredLicense": "MIT",
+      "role": "frontend bundled dependency",
+      "source": "https://www.npmjs.com/package/@xyflow/system/v/0.0.83",
+      "installedLicensePaths": [
+        "node_modules/.pnpm/@xyflow+system@0.0.83/node_modules/@xyflow/system/LICENSE"
+      ],
+      "licenseFiles": [
+        "xyflow-system-0.0.83-LICENSE"
+      ]
+    },
+    {
+      "name": "d3-drag",
+      "version": "3.0.0",
+      "declaredLicense": "ISC",
+      "role": "frontend bundled dependency",
+      "source": "https://www.npmjs.com/package/d3-drag/v/3.0.0",
+      "installedLicensePaths": [
+        "node_modules/.pnpm/d3-drag@3.0.0/node_modules/d3-drag/LICENSE"
+      ],
+      "licenseFiles": [
+        "d3-drag-3.0.0-LICENSE"
+      ]
+    },
+    {
+      "name": "d3-dispatch",
+      "version": "3.0.1",
+      "declaredLicense": "ISC",
+      "role": "frontend bundled dependency",
+      "source": "https://www.npmjs.com/package/d3-dispatch/v/3.0.1",
+      "installedLicensePaths": [
+        "node_modules/.pnpm/d3-dispatch@3.0.1/node_modules/d3-dispatch/LICENSE"
+      ],
+      "licenseFiles": [
+        "d3-dispatch-3.0.1-LICENSE"
+      ]
+    },
+    {
+      "name": "d3-selection",
+      "version": "3.0.0",
+      "declaredLicense": "ISC",
+      "role": "frontend bundled dependency",
+      "source": "https://www.npmjs.com/package/d3-selection/v/3.0.0",
+      "installedLicensePaths": [
+        "node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/LICENSE"
+      ],
+      "licenseFiles": [
+        "d3-selection-3.0.0-LICENSE"
+      ]
+    },
+    {
+      "name": "d3-interpolate",
+      "version": "3.0.1",
+      "declaredLicense": "ISC",
+      "role": "frontend bundled dependency",
+      "source": "https://www.npmjs.com/package/d3-interpolate/v/3.0.1",
+      "installedLicensePaths": [
+        "node_modules/.pnpm/d3-interpolate@3.0.1/node_modules/d3-interpolate/LICENSE"
+      ],
+      "licenseFiles": [
+        "d3-interpolate-3.0.1-LICENSE"
+      ]
+    },
+    {
+      "name": "d3-color",
+      "version": "3.1.0",
+      "declaredLicense": "ISC",
+      "role": "frontend bundled dependency",
+      "source": "https://www.npmjs.com/package/d3-color/v/3.1.0",
+      "installedLicensePaths": [
+        "node_modules/.pnpm/d3-color@3.1.0/node_modules/d3-color/LICENSE"
+      ],
+      "licenseFiles": [
+        "d3-color-3.1.0-LICENSE"
+      ]
+    },
+    {
+      "name": "d3-zoom",
+      "version": "3.0.0",
+      "declaredLicense": "ISC",
+      "role": "frontend bundled dependency",
+      "source": "https://www.npmjs.com/package/d3-zoom/v/3.0.0",
+      "installedLicensePaths": [
+        "node_modules/.pnpm/d3-zoom@3.0.0/node_modules/d3-zoom/LICENSE"
+      ],
+      "licenseFiles": [
+        "d3-zoom-3.0.0-LICENSE"
+      ]
+    },
+    {
+      "name": "d3-transition",
+      "version": "3.0.1",
+      "declaredLicense": "ISC",
+      "role": "frontend bundled dependency",
+      "source": "https://www.npmjs.com/package/d3-transition/v/3.0.1",
+      "installedLicensePaths": [
+        "node_modules/.pnpm/d3-transition@3.0.1_d3-selection@3.0.0/node_modules/d3-transition/LICENSE"
+      ],
+      "licenseFiles": [
+        "d3-transition-3.0.1-LICENSE"
+      ]
+    },
+    {
+      "name": "d3-ease",
+      "version": "3.0.1",
+      "declaredLicense": "BSD-3-Clause",
+      "role": "frontend bundled dependency",
+      "source": "https://www.npmjs.com/package/d3-ease/v/3.0.1",
+      "installedLicensePaths": [
+        "node_modules/.pnpm/d3-ease@3.0.1/node_modules/d3-ease/LICENSE"
+      ],
+      "licenseFiles": [
+        "d3-ease-3.0.1-LICENSE"
+      ]
+    },
+    {
+      "name": "d3-timer",
+      "version": "3.0.1",
+      "declaredLicense": "ISC",
+      "role": "frontend bundled dependency",
+      "source": "https://www.npmjs.com/package/d3-timer/v/3.0.1",
+      "installedLicensePaths": [
+        "node_modules/.pnpm/d3-timer@3.0.1/node_modules/d3-timer/LICENSE"
+      ],
+      "licenseFiles": [
+        "d3-timer-3.0.1-LICENSE"
+      ]
+    },
+    {
+      "name": "lucide-react",
+      "version": "0.468.0",
+      "declaredLicense": "ISC",
+      "role": "frontend bundled dependency",
+      "source": "https://www.npmjs.com/package/lucide-react/v/0.468.0",
+      "installedLicensePaths": [
+        "node_modules/.pnpm/lucide-react@0.468.0_react@19.3.1/node_modules/lucide-react/LICENSE"
+      ],
+      "licenseFiles": [
+        "lucide-react-0.468.0-LICENSE"
+      ]
+    },
+    {
+      "name": "react",
+      "version": "19.3.1",
+      "declaredLicense": "MIT",
+      "role": "frontend bundled dependency",
+      "source": "https://www.npmjs.com/package/react/v/19.3.1",
+      "installedLicensePaths": [
+        "node_modules/.pnpm/react@19.3.1/node_modules/react/LICENSE"
+      ],
+      "licenseFiles": [
+        "react-19.3.1-LICENSE"
+      ]
+    },
+    {
+      "name": "react-dom",
+      "version": "19.3.1",
+      "declaredLicense": "MIT",
+      "role": "frontend bundled dependency",
+      "source": "https://www.npmjs.com/package/react-dom/v/19.3.1",
+      "installedLicensePaths": [
+        "node_modules/.pnpm/react-dom@19.3.1_react@19.3.1/node_modules/react-dom/LICENSE"
+      ],
+      "licenseFiles": [
+        "react-dom-19.3.1-LICENSE"
+      ]
+    },
+    {
+      "name": "scheduler",
+      "version": "0.28.0",
+      "declaredLicense": "MIT",
+      "role": "frontend bundled dependency",
+      "source": "https://www.npmjs.com/package/scheduler/v/0.28.0",
+      "installedLicensePaths": [
+        "node_modules/.pnpm/scheduler@0.28.0/node_modules/scheduler/LICENSE"
+      ],
+      "licenseFiles": [
+        "scheduler-0.28.0-LICENSE"
+      ]
+    },
+    {
+      "name": "zustand",
+      "version": "5.0.16",
+      "declaredLicense": "MIT",
+      "role": "frontend bundled dependency",
+      "source": "https://www.npmjs.com/package/zustand/v/5.0.16",
+      "installedLicensePaths": [
+        "node_modules/.pnpm/zustand@5.0.16_@types+react_6a34842ff7f646f18bab995b70f01a2e/node_modules/zustand/LICENSE"
+      ],
+      "licenseFiles": [
+        "zustand-5.0.16-LICENSE"
+      ]
+    },
+    {
+      "name": "vite",
+      "version": "7.3.7",
+      "declaredLicense": "MIT",
+      "role": "license for the Vite-generated browser preload helper; build tool and its dependencies are not distributed",
+      "source": "https://www.npmjs.com/package/vite/v/7.3.7",
+      "installedLicensePaths": [
+        "node_modules/.pnpm/vite@7.3.7_@types+node@24.19.2/node_modules/vite/LICENSE.md"
+      ],
+      "licenseFiles": [
+        "vite-7.3.7-LICENSE.md"
+      ]
+    },
+    {
+      "name": "Node.js",
+      "version": "24.19.0",
+      "role": "Windows x64 runtime; original complete Node license including notices for embedded dependencies",
+      "source": "https://raw.githubusercontent.com/nodejs/node/v24.19.0/LICENSE",
+      "licenseFiles": [
+        "node-v24.19.0-LICENSE.txt"
+      ],
+      "sha256": "148eacf7863ef4329224a29398623077200a27194aa075569faf4a0a85566ca5"
+    },
+    {
+      "name": "IBM Plex Sans",
+      "version": "font asset build version not recorded; license version 1.1",
+      "role": "locally cached WOFF2 font",
+      "source": "https://raw.githubusercontent.com/IBM/plex/master/LICENSE.txt",
+      "licenseFiles": [
+        "IBM-Plex-OFL-1.1.txt"
+      ],
+      "sha256": "7e6b2818edbd8f6a01ae80641cc8f16a51080d08fb4e532be3a0b6f74adb07da"
+    },
+    {
+      "name": "Montserrat",
+      "version": "font asset build version not recorded; license version 1.1",
+      "role": "locally cached WOFF2 font",
+      "source": "https://raw.githubusercontent.com/JulietaUla/Montserrat/master/OFL.txt",
+      "licenseFiles": [
+        "Montserrat-OFL-1.1.txt"
+      ],
+      "sha256": "8b7141c03fa4f8d44e6345d5d4931709290f0f67875e452e95ac1fd3a027802e"
+    },
+    {
+      "name": "Noto Sans SC",
+      "version": "font asset build version not recorded; license version 1.1",
+      "role": "locally cached WOFF2 font subsets",
+      "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/notosanssc/OFL.txt",
+      "licenseFiles": [
+        "Noto-Sans-SC-OFL-1.1.txt"
+      ],
+      "sha256": "1c05c68c34f9708415aada51f17e1b0092d2cea709bf4a94cd38114f9e73d7d9"
+    }
+  ],
+  "fontAssetIdentities": [
+    {
+      "filename": "ibm-plex-sans-latin-variable.26d4368b.woff2",
+      "source": "https://cdn.virse.ai/_next/static/media/ibm-plex-sans-latin-variable.26d4368b.woff2",
+      "sha256": "056e4e2459f57a0033c8c9c844ff19d6e42ac8602027803d4345823bcc939818"
+    },
+    {
+      "filename": "a838cfed199e32f6-s.p.woff2",
+      "source": "https://cdn.virse.ai/_next/static/media/a838cfed199e32f6-s.p.woff2",
+      "sha256": "06b16db7a969135d48d38c49183be7fb88d4452e2a3011957c7851941f4e4879"
+    },
+    {
+      "filename": "cf725a8ae48df54c-s.cf725a8a.woff2",
+      "source": "https://cdn.virse.ai/_next/static/media/cf725a8ae48df54c-s.cf725a8a.woff2",
+      "sha256": "c5b03f399299881f0541366e51263883cbfd38189b31ba83adf6111624da20a4"
+    },
+    {
+      "filename": "cfd80e3a45313785-s.cfd80e3a.woff2",
+      "source": "https://cdn.virse.ai/_next/static/media/cfd80e3a45313785-s.cfd80e3a.woff2",
+      "sha256": "ae71162d5d1031c7619c28fec4d2b6c86efe040e166596e419e699bfedbf05b9"
+    },
+    {
+      "filename": "abc0681c3caf3185-s.abc0681c.woff2",
+      "source": "https://cdn.virse.ai/_next/static/media/abc0681c3caf3185-s.abc0681c.woff2",
+      "sha256": "8d5a8a721db838a49534353f44a6bd8cf3a917594fce59c2d13d652aa9b3c2cc"
+    },
+    {
+      "filename": "a28a1e9cdee21412-s.a28a1e9c.woff2",
+      "source": "https://cdn.virse.ai/_next/static/media/a28a1e9cdee21412-s.a28a1e9c.woff2",
+      "sha256": "cb4e8739bbac9750b746b0c05a5765650ba2798d9da9ff22931cd0922d94e31f"
+    },
+    {
+      "filename": "ff606ab945873cbd-s.ff606ab9.woff2",
+      "source": "https://cdn.virse.ai/_next/static/media/ff606ab945873cbd-s.ff606ab9.woff2",
+      "sha256": "9e6669feff9e8a27a587341bdb88af63dafcaed79c5992e4a70cbb4e59263f86"
+    },
+    {
+      "filename": "33718844fb0798ef-s.33718844.woff2",
+      "source": "https://cdn.virse.ai/_next/static/media/33718844fb0798ef-s.33718844.woff2",
+      "sha256": "077e21987005441f5865e8ee4479b932fbe7e1d687a969fda8f1aae623072754"
+    },
+    {
+      "filename": "be2afef9721bdbc2-s.be2afef9.woff2",
+      "source": "https://cdn.virse.ai/_next/static/media/be2afef9721bdbc2-s.be2afef9.woff2",
+      "sha256": "86ce96cc0bdb4f13533e08effc82bafcd72ebbe6e2bf73f6d7e0eae69f990d1e"
+    },
+    {
+      "filename": "b911ba6d74ed3f89-s.b911ba6d.woff2",
+      "source": "https://cdn.virse.ai/_next/static/media/b911ba6d74ed3f89-s.b911ba6d.woff2",
+      "sha256": "a40dfabe2ea9806d3fca94b165f9f383bfcc1def079f5ff1e3b0744fdb8f128b"
+    },
+    {
+      "filename": "7637af4f10f4e9d5-s.7637af4f.woff2",
+      "source": "https://cdn.virse.ai/_next/static/media/7637af4f10f4e9d5-s.7637af4f.woff2",
+      "sha256": "0fa8998697a0522db349d62c2dce34e2df1afcf6ff9b9abb76f4e2b6e0ab60fd"
+    },
+    {
+      "filename": "2b261e659b551a46-s.2b261e65.woff2",
+      "source": "https://cdn.virse.ai/_next/static/media/2b261e659b551a46-s.2b261e65.woff2",
+      "sha256": "ee02c73845301be88f800321bcf72b9f5fdf8e77994c45b1cb929640700f73e0"
+    },
+    {
+      "filename": "feee9e12ea9450c9-s.feee9e12.woff2",
+      "source": "https://cdn.virse.ai/_next/static/media/feee9e12ea9450c9-s.feee9e12.woff2",
+      "sha256": "cdbb99bdb9c10de1f858228479e96512ede04905bb8be4396170e37e7ad7029e"
+    },
+    {
+      "filename": "0daf8b93acb78d32-s.0daf8b93.woff2",
+      "source": "https://cdn.virse.ai/_next/static/media/0daf8b93acb78d32-s.0daf8b93.woff2",
+      "sha256": "8dcfcca3e3237024abce63c5df1cb710cc70fb1a2a5fa3ee1ccc32d8a1ce47e5"
+    },
+    {
+      "filename": "868edd7da6924777-s.868edd7d.woff2",
+      "source": "https://cdn.virse.ai/_next/static/media/868edd7da6924777-s.868edd7d.woff2",
+      "sha256": "f657f35cfde58ea70802867348d0daa293465edb567953d2d098180e066bb569"
+    },
+    {
+      "filename": "b53c1142b9136fe1-s.b53c1142.woff2",
+      "source": "https://cdn.virse.ai/_next/static/media/b53c1142b9136fe1-s.b53c1142.woff2",
+      "sha256": "11adf55e9b09a3a05785ac9ec687d5d828829ea4844c5dea033c6c88f74f6c2c"
+    },
+    {
+      "filename": "edef1a271f97a8ec-s.edef1a27.woff2",
+      "source": "https://cdn.virse.ai/_next/static/media/edef1a271f97a8ec-s.edef1a27.woff2",
+      "sha256": "a9b0cb83a0e1a00d03eb86e1854fcb880c1207eb68f2c41425c8bfe04e550a66"
+    }
+  ]
+}

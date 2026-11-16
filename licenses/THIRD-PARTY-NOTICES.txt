@@ -1,0 +1,152 @@
+THIRD-PARTY NOTICES
+Collected 2026-10-30
+
+The files listed below contain the original license and copyright notices supplied with the portable app. License identifiers, where shown, come from installed package metadata. Consult each complete text for its terms.
+
+@xyflow/react | 12.12.0
+Role: frontend bundled dependency
+Package-declared license: MIT
+Source: https://www.npmjs.com/package/@xyflow/react/v/12.12.0
+License text: xyflow-react-12.12.0-LICENSE
+
+classcat | 5.0.5
+Role: frontend bundled dependency
+Package-declared license: MIT
+Source: https://www.npmjs.com/package/classcat/v/5.0.5
+License text: classcat-5.0.5-LICENSE.md
+
+zustand | 4.5.7
+Role: frontend bundled dependency
+Package-declared license: MIT
+Source: https://www.npmjs.com/package/zustand/v/4.5.7
+License text: zustand-4.5.7-LICENSE
+
+use-sync-external-store | 1.7.0
+Role: frontend bundled dependency
+Package-declared license: MIT
+Source: https://www.npmjs.com/package/use-sync-external-store/v/1.7.0
+License text: use-sync-external-store-1.7.0-LICENSE
+
+@xyflow/system | 0.0.83
+Role: frontend bundled dependency
+Package-declared license: MIT
+Source: https://www.npmjs.com/package/@xyflow/system/v/0.0.83
+License text: xyflow-system-0.0.83-LICENSE
+
+d3-drag | 3.0.0
+Role: frontend bundled dependency
+Package-declared license: ISC
+Source: https://www.npmjs.com/package/d3-drag/v/3.0.0
+License text: d3-drag-3.0.0-LICENSE
+
+d3-dispatch | 3.0.1
+Role: frontend bundled dependency
+Package-declared license: ISC
+Source: https://www.npmjs.com/package/d3-dispatch/v/3.0.1
+License text: d3-dispatch-3.0.1-LICENSE
+
+d3-selection | 3.0.0
+Role: frontend bundled dependency
+Package-declared license: ISC
+Source: https://www.npmjs.com/package/d3-selection/v/3.0.0
+License text: d3-selection-3.0.0-LICENSE
+
+d3-interpolate | 3.0.1
+Role: frontend bundled dependency
+Package-declared license: ISC
+Source: https://www.npmjs.com/package/d3-interpolate/v/3.0.1
+License text: d3-interpolate-3.0.1-LICENSE
+
+d3-color | 3.1.0
+Role: frontend bundled dependency
+Package-declared license: ISC
+Source: https://www.npmjs.com/package/d3-color/v/3.1.0
+License text: d3-color-3.1.0-LICENSE
+
+d3-zoom | 3.0.0
+Role: frontend bundled dependency
+Package-declared license: ISC
+Source: https://www.npmjs.com/package/d3-zoom/v/3.0.0
+License text: d3-zoom-3.0.0-LICENSE
+
+d3-transition | 3.0.1
+Role: frontend bundled dependency
+Package-declared license: ISC
+Source: https://www.npmjs.com/package/d3-transition/v/3.0.1
+License text: d3-transition-3.0.1-LICENSE
+
+d3-ease | 3.0.1
+Role: frontend bundled dependency
+Package-declared license: BSD-3-Clause
+Source: https://www.npmjs.com/package/d3-ease/v/3.0.1
+License text: d3-ease-3.0.1-LICENSE
+
+d3-timer | 3.0.1
+Role: frontend bundled dependency
+Package-declared license: ISC
+Source: https://www.npmjs.com/package/d3-timer/v/3.0.1
+License text: d3-timer-3.0.1-LICENSE
+
+lucide-react | 0.468.0
+Role: frontend bundled dependency
+Package-declared license: ISC
+Source: https://www.npmjs.com/package/lucide-react/v/0.468.0
+License text: lucide-react-0.468.0-LICENSE
+
+react | 19.3.1
+Role: frontend bundled dependency
+Package-declared license: MIT
+Source: https://www.npmjs.com/package/react/v/19.3.1
+License text: react-19.3.1-LICENSE
+
+react-dom | 19.3.1
+Role: frontend bundled dependency
+Package-declared license: MIT
+Source: https://www.npmjs.com/package/react-dom/v/19.3.1
+License text: react-dom-19.3.1-LICENSE
+
+scheduler | 0.28.0
+Role: frontend bundled dependency
+Package-declared license: MIT
+Source: https://www.npmjs.com/package/scheduler/v/0.28.0
+License text: scheduler-0.28.0-LICENSE
+
+zustand | 5.0.16
+Role: frontend bundled dependency
+Package-declared license: MIT
+Source: https://www.npmjs.com/package/zustand/v/5.0.16
+License text: zustand-5.0.16-LICENSE
+
+vite | 7.3.7
+Role: license for the Vite-generated browser preload helper; build tool and its dependencies are not distributed
+Package-declared license: MIT
+Source: https://www.npmjs.com/package/vite/v/7.3.7
+License text: vite-7.3.7-LICENSE.md
+
+Node.js | 24.19.0
+Role: Windows x64 runtime; original complete Node license including notices for embedded dependencies
+Source: https://raw.githubusercontent.com/nodejs/node/v24.19.0/LICENSE
+License text: node-v24.19.0-LICENSE.txt
+
+IBM Plex Sans | font asset build version not recorded; license version 1.1
+Role: locally cached WOFF2 font
+Source: https://raw.githubusercontent.com/IBM/plex/master/LICENSE.txt
+License text: IBM-Plex-OFL-1.1.txt
+
+Montserrat | font asset build version not recorded; license version 1.1
+Role: locally cached WOFF2 font
+Source: https://raw.githubusercontent.com/JulietaUla/Montserrat/master/OFL.txt
+License text: Montserrat-OFL-1.1.txt
+
+Noto Sans SC | font asset build version not recorded; license version 1.1
+Role: locally cached WOFF2 font subsets
+Source: https://raw.githubusercontent.com/google/fonts/main/ofl/notosanssc/OFL.txt
+License text: Noto-Sans-SC-OFL-1.1.txt
+
+Font build versions were not recorded in the supplied hashed WOFF2 filenames. manifest.json identifies every exact font file by SHA-256 and its original asset URL. Each family has its complete upstream OFL 1.1 text here; fonts-original-NOTICE.txt preserves the original local provenance notice.
+
+The complete Node.js v24.19.0 LICENSE includes notices and license texts for the libraries embedded in node.exe. It has not been reduced to the top-level Node license.
+
+Only the Vite package license is supplied for its generated browser preload helper. The Vite build tool and its separate build-time npm dependencies are not included in the portable app.
+
+No package code or external license text was executed by this collection.
