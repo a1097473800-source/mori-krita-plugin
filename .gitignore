@@ -4,3 +4,4 @@ webview-host/build/
 releases/
 qa-output/
 .DS_Store
+prerequisites/*.exe
