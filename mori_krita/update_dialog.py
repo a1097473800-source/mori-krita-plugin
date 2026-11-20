@@ -1,10 +1,9 @@
-"""Mori's native update window, shared by realtime and workbench modes."""
-import math
+"""Update content and controls embedded in the Mori settings window."""
 import re
 
 from PyQt5.QtCore import QRectF, QSize, Qt, QTimer, pyqtSignal
 from PyQt5.QtGui import QColor, QIcon, QPainter, QPainterPath, QPen, QPixmap
-from PyQt5.QtWidgets import (QCheckBox, QDialog, QFrame, QHBoxLayout, QLabel,
+from PyQt5.QtWidgets import (QCheckBox, QFrame, QHBoxLayout, QLabel,
                             QPushButton, QTextBrowser, QToolButton, QVBoxLayout, QWidget)
 
 
@@ -14,10 +13,10 @@ QFrame#UpdateWindow { background:#1d1d21; border:1px solid #38383f; border-radiu
 QLabel { background:transparent; color:#eeeef2; font-family:'Microsoft YaHei UI'; font-size:13px; border:0; }
 QLabel#UpdateBrand { color:#f2f0f6; font-size:12px; font-weight:600; }
 QLabel#UpdateEyebrow { color:#86848f; font-size:12px; }
-QLabel#UpdateHeading { font-size:23px; font-weight:600; color:#f5f3f8; }
+QLabel#UpdateHeading { font-size:19px; font-weight:600; color:#f5f3f8; }
 QLabel#UpdateMuted { color:#96949f; font-size:12px; }
 QLabel#UpdateVersionCaption { color:#9c99a7; font-size:12px; }
-QLabel#UpdateVersion { font-family:'Segoe UI'; font-size:25px; font-weight:600; }
+QLabel#UpdateVersion { font-family:'Segoe UI'; font-size:23px; font-weight:600; }
 QLabel#UpdateArrow { color:#64616e; font-size:22px; }
 QLabel#UpdateSectionTitle { color:#e5e2ec; font-size:13px; font-weight:600; }
 QLabel#UpdateTag { color:#c2b0ef; font-family:'Segoe UI'; font-size:11px; }
@@ -170,50 +169,18 @@ class WindowHeader(QFrame):
         super().mouseReleaseEvent(event)
 
 
-class UpdateDialog(QDialog):
+class UpdatePage(QWidget):
     check_requested = pyqtSignal()
     download_requested = pyqtSignal()
     releases_requested = pyqtSignal()
     automatic_changed = pyqtSignal(bool)
 
     def __init__(self, version, automatic, parent=None):
-        super().__init__(parent, Qt.Dialog | Qt.FramelessWindowHint)
+        super().__init__(parent)
         self.current_version = version
-        self.setWindowTitle("Mori · 软件更新")
-        self.setAttribute(Qt.WA_TranslucentBackground)
-        self.setMinimumWidth(540)
-        self.resize(560, 620)
-        self.setStyleSheet(STYLE)
-        outer = QVBoxLayout(self)
-        outer.setContentsMargins(0, 0, 0, 0)
-        frame = QFrame()
-        frame.setObjectName("UpdateWindow")
-        outer.addWidget(frame)
-        layout = QVBoxLayout(frame)
-        layout.setContentsMargins(26, 18, 26, 20)
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
-
-        header = WindowHeader(frame)
-        header_layout = QHBoxLayout(header)
-        header_layout.setContentsMargins(0, 0, 0, 0)
-        header_layout.setSpacing(12)
-        brand = self.label("MORI", "UpdateBrand")
-        brand.setAttribute(Qt.WA_TransparentForMouseEvents)
-        eyebrow = self.label("/  软件更新", "UpdateEyebrow")
-        eyebrow.setAttribute(Qt.WA_TransparentForMouseEvents)
-        header_layout.addWidget(brand)
-        header_layout.addWidget(eyebrow)
-        header_layout.addStretch()
-        close = QToolButton()
-        close.setObjectName("UpdateClose")
-        close.setFixedSize(28, 28)
-        close.setIcon(small_icon("close"))
-        close.setAccessibleName("关闭更新窗口")
-        close.setCursor(Qt.PointingHandCursor)
-        close.clicked.connect(self.close)
-        header_layout.addWidget(close)
-        layout.addWidget(header)
-        layout.addSpacing(22)
 
         hero = QHBoxLayout()
         hero.setSpacing(17)
@@ -227,12 +194,12 @@ class UpdateDialog(QDialog):
         hero_text.addWidget(self.native_status)
         hero.addLayout(hero_text, 1)
         layout.addLayout(hero)
-        layout.addSpacing(19)
+        layout.addSpacing(14)
 
         versions = QFrame()
         versions.setObjectName("UpdateVersionCard")
         version_layout = QHBoxLayout(versions)
-        version_layout.setContentsMargins(20, 15, 20, 15)
+        version_layout.setContentsMargins(20, 11, 20, 11)
         current = QVBoxLayout()
         current.setSpacing(5)
         current.addWidget(self.label("当前版本", "UpdateVersionCaption"))
@@ -253,7 +220,7 @@ class UpdateDialog(QDialog):
         self.notes_card = QFrame()
         self.notes_card.setObjectName("UpdateNotesCard")
         notes_layout = QVBoxLayout(self.notes_card)
-        notes_layout.setContentsMargins(18, 14, 18, 12)
+        notes_layout.setContentsMargins(18, 11, 18, 10)
         notes_layout.setSpacing(8)
         notes_header = QHBoxLayout()
         notes_header.addWidget(self.label("更新内容", "UpdateSectionTitle"))
@@ -265,7 +232,7 @@ class UpdateDialog(QDialog):
         self.notes.setOpenExternalLinks(False)
         self.notes.setOpenLinks(False)
         self.notes.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.notes.setFixedHeight(62)
+        self.notes.setFixedHeight(64)
         notes_layout.addWidget(self.notes)
         self.records = QToolButton()
         self.records.setObjectName("UpdateRecordLink")
@@ -286,16 +253,17 @@ class UpdateDialog(QDialog):
         web_layout.setSpacing(7)
         web_header = QHBoxLayout()
         web_header.addWidget(self.label("工作台网页", "UpdateSectionTitle"))
+        self.web_version = self.label("随插件安装", "UpdateMuted")
+        self.web_version.setWordWrap(False)
+        web_header.addWidget(self.web_version)
         web_header.addStretch()
         self.web_badge = self.label("待检查", "UpdateWebBadge")
         web_header.addWidget(self.web_badge)
         web_layout.addLayout(web_header)
-        self.web_version = self.label("随插件安装", "UpdateMuted")
         self.web_status = self.label("兼容的网页更新会在后台下载。", "UpdateMuted")
-        web_layout.addWidget(self.web_version)
         web_layout.addWidget(self.web_status)
         layout.addWidget(web)
-        layout.addSpacing(17)
+        layout.addSpacing(13)
 
         automatic_row = QHBoxLayout()
         automatic_text = QVBoxLayout()
@@ -312,17 +280,8 @@ class UpdateDialog(QDialog):
         self.instructions.hide()
         layout.addSpacing(10)
         layout.addWidget(self.instructions)
-        layout.addStretch(1)
-        layout.addSpacing(12)
-        divider = QFrame()
-        divider.setObjectName("UpdateDivider")
-        divider.setFixedHeight(1)
-        layout.addWidget(divider)
-        layout.addSpacing(16)
-        footer = QHBoxLayout()
-        footer.setSpacing(9)
         self.checked_at = self.label("尚未检查", "UpdateMuted")
-        footer.addWidget(self.checked_at, 1)
+        self.checked_at.setWordWrap(False)
         self.check = QPushButton("检查更新")
         self.check.setCursor(Qt.PointingHandCursor)
         self.check.setProperty("variant", "primary")
@@ -333,9 +292,6 @@ class UpdateDialog(QDialog):
         self.download.setEnabled(False)
         self.download.hide()
         self.download.clicked.connect(self.download_requested.emit)
-        footer.addWidget(self.check)
-        footer.addWidget(self.download)
-        layout.addLayout(footer)
         self.notes.setPlainText("检查后在这里查看本次更新内容。")
 
     @staticmethod
@@ -375,8 +331,6 @@ class UpdateDialog(QDialog):
         self.note_tag.setText("v" + release.version if release else "")
         self.notes.setPlainText(release.notes if release and release.notes else
             "打开完整更新记录，查看功能变化与历史版本。" if release else "检查后在这里查看本次更新内容。")
-        self.notes.document().setTextWidth(max(360, self.width() - 96))
-        self.notes.setFixedHeight(min(178, max(48, math.ceil(self.notes.document().size().height()) + 8)))
         self.download.setEnabled(bool(available and release.download_url))
         self.download.setVisible(bool(available and release.download_url))
         self.instructions.setVisible(bool(available and release.download_url))
@@ -389,7 +343,9 @@ class UpdateDialog(QDialog):
         friendly = ".".join(match.groups()) if match else web_version
         self.web_version.setText("当前网页 · " + friendly)
         self.web_version.setToolTip(web_version)
-        self.web_status.setText(web_message or "兼容的网页更新会在后台下载。")
+        self.web_status.setToolTip(web_message)
+        friendly_message = web_message.split(" · ", 1)[0]
+        self.web_status.setText(friendly_message or "兼容的网页更新会在后台下载。")
         self.web_badge.setText("待重启" if "重开" in web_message or "重连" in web_message else
             "检查中" if "正在检查" in web_message else "已更新" if "已更新" in web_message or "最新" in web_message else
             "暂不可用" if "无法" in web_message or "未完成" in web_message or "尚未发布" in web_message else "待检查")

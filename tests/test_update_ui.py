@@ -55,16 +55,17 @@ class UpdateUiTests(unittest.TestCase):
         for index in (0, 1):
             with mock.patch.object(self.dock, "_start"), mock.patch.object(self.dock._realtime, "set_active"):
                 self.dock._set_mode(index)
-            self.assertFalse(self.dock._updates_entry.isHidden())
-        actions = [action.text() for menu in self.dock.findChildren(docker_module.QMenu) for action in menu.actions()]
-        self.assertIn("检查更新…", actions)
+            self.assertFalse(self.dock._settings_entry.isHidden())
+        self.assertEqual([action.text() for action in self.dock._mode_button.menu().actions()],
+                         ["实时模式", "工作台模式"])
+        self.assertEqual(self.dock._settings_entry.text(), "设置")
 
     def test_background_check_in_realtime_does_not_open_workbench_or_dialog(self):
         self.capture_workers()
         with mock.patch.object(self.dock._web, "start") as start:
             self.dock._automatic_update_check()
             self.assertEqual(len(self.workers), 2)
-            self.assertIsNone(self.dock._update_dialog)
+            self.assertIsNone(self.dock._settings_dialog)
             start.assert_not_called()
         self.assertEqual(self.dock._update_timer.interval(), 6 * 60 * 60 * 1000)
 
@@ -86,7 +87,8 @@ class UpdateUiTests(unittest.TestCase):
                 function, done = self.workers[0]
                 function()
                 done()
-            self.assertEqual(self.dock._updates_entry.text(), "有更新")
+            self.assertEqual(self.dock._settings_entry.text(), "设置")
+            self.assertTrue(self.dock._settings_entry.available)
             status.assert_not_called()
 
     def test_cancelled_native_worker_cannot_show_old_release(self):
@@ -146,7 +148,7 @@ class UpdateUiTests(unittest.TestCase):
 
     def test_dialog_uses_plain_text_and_downloads_only_when_newer(self):
         module = importlib.import_module("mori_controller_fixture.update_dialog")
-        dialog = module.UpdateDialog(docker_module.VERSION, True, self.window)
+        dialog = module.UpdatePage(docker_module.VERSION, True, self.window)
         result = self.result()
         dialog.render(result, result.release, "20261120-current", "网页已是最新兼容版本", False, "2026-11-20 15:00")
         self.assertTrue(dialog.download.isEnabled())

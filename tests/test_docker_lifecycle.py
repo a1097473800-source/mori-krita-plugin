@@ -58,8 +58,8 @@ class DockerLifecycleTests(unittest.TestCase):
     def test_installed_selection_assistant_remains_available_after_update(self):
         self.assertTrue(hasattr(self.docker, "_selection"))
         self.assertTrue(self.docker.findChildren(fixture.controller_module.SelectionController))
-        self.assertIn("选区栏", [action.text() for menu in self.docker.findChildren(docker_module.QMenu)
-                                for action in menu.actions()])
+        self.docker._show_settings("realtime")
+        self.assertEqual(self.docker._settings_dialog.selection.isChecked(), self.docker._selection.enabled)
 
     def test_deleted_realtime_panel_does_not_interrupt_remaining_shutdown(self):
         controller = self.docker._realtime
@@ -220,7 +220,7 @@ class DockerLifecycleTests(unittest.TestCase):
         with mock.patch.object(self.docker._web, "start") as start:
             start.assert_not_called()
             self.assertTrue(self.docker._web_update_pending)
-            self.assertFalse(self.docker._update_button.isEnabled())
+            self.assertTrue(self.docker._settings_entry.isEnabled())
             with mock.patch.object(docker_module, "WebUpdateManager") as manager:
                 manager.return_value.check.return_value = self.web_result()
                 worker["function"]()
@@ -229,7 +229,7 @@ class DockerLifecycleTests(unittest.TestCase):
             start.assert_called_once_with(gateway.url)
         self.assertEqual(gateway.web_root, Path("new-web"))
         self.assertIn("20261106-new", self.docker._brand.toolTip())
-        self.assertTrue(self.docker._update_button.isEnabled())
+        self.assertTrue(self.docker._settings_entry.isEnabled())
 
     def test_manual_check_keeps_open_page_pinned_to_its_release(self):
         self.docker._web_started = True

@@ -132,8 +132,10 @@ Vision Tools 2.2.0 面向 Krita 5.3；3.0.0 不用于此集成包。
     notice = notice.replace('{VERSION}', version).replace('{AI_VERSION}', AI_VERSION)
     notice += '''
 更新方式：
-点击 Mori 面板顶部“更新”，查看当前版本、最新版本、更新说明和下载入口。
-启动后自动在后台检查，发现新版本时持续显示“有更新”，也可手动重新检查。
+点击 Mori 面板右上角齿轮“设置”，打开独立的 Mori 设置窗口。
+左侧分为“画布与图层”“实时与选区”“更新与版本”，常用偏好自动保存。
+在“更新与版本”查看当前版本、最新版本、更新说明和下载入口。
+启动后自动在后台检查，发现新版本时在齿轮上持续显示小圆点，也可手动重新检查。
 工作台网页通过官网校验后下载；网页已打开时，保存作品并重开 Krita 后生效。
 Mori 插件：在更新页下载新版 Compatibility-Update.zip，退出 Krita 后完整解压，双击“更新已安装插件.cmd”，无需重装整个 Krita。
 https://github.com/a1097473800-source/mori-krita-plugin/releases
