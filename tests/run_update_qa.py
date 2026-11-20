@@ -9,7 +9,7 @@ def main(arguments):
     output = Path(arguments[0])
     output.mkdir(parents=True, exist_ok=True)
     report = {}
-    for name in ("test_update_ui", "test_settings_ui", "test_docker_lifecycle", "test_startup_visibility", "test_realtime", "test_realtime_layout", "test_webview_lifecycle"):
+    for name in ("test_update_ui", "test_settings_ui", "test_docker_lifecycle", "test_startup_visibility", "test_realtime", "test_realtime_layout", "test_webview_lifecycle", "test_import_aspect", "test_reference_encoding", "test_selection_tasks"):
         stream = io.StringIO()
         result = unittest.TextTestRunner(stream=stream, verbosity=2).run(
             unittest.defaultTestLoader.loadTestsFromModule(importlib.import_module(name)))

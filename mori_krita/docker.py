@@ -169,16 +169,10 @@ class MoriDocker(DockWidget):
         self._settings_entry = SettingsEntry(titlebar)
         self._settings_entry.clicked.connect(lambda: self._show_settings())
         title_layout.addWidget(self._settings_entry)
-        undock = icon_button("float", "浮动 / 停靠面板", titlebar)
-        self._undock_button = undock
-        undock.setProperty("role", "window")
-        undock.setFixedSize(24, 24)
-        undock.clicked.connect(lambda: self.setFloating(not self.isFloating()))
         close = icon_button("close", "关闭 Mori 面板", titlebar)
         close.setProperty("role", "window")
         close.setFixedSize(24, 24)
         close.clicked.connect(self.close)
-        title_layout.addWidget(undock)
         title_layout.addWidget(close)
         self.setTitleBarWidget(titlebar)
 
@@ -229,11 +223,12 @@ class MoriDocker(DockWidget):
         self._reference_mode = QComboBox(workbench)
         self._reference_mode.addItem("快速参考", "fast")
         self._reference_mode.addItem("原图无损", "original")
-        self._reference_mode.setToolTip("快速参考缩小上传副本，最长边 2048、最多 400 万像素；透明度保留。Krita 原图和结果图层尺寸不变。")
-        saved_mode = self._settings.value("referenceMode", "fast", type=str)
+        self._reference_mode.setToolTip("原图无损按原始尺寸上传 PNG；快速参考会缩小并可能有损压缩。此项控制参考图上传，不改变生成输出分辨率。")
+        saved_mode = self._settings.value("referenceMode", "original", type=str)
         self._reference_mode.setCurrentIndex(1 if saved_mode == "original" else 0)
         self._reference_mode.currentIndexChanged.connect(
             lambda: self._settings.setValue("referenceMode", self._reference_mode.currentData()))
+        self._reference_mode.currentIndexChanged.connect(self._reference_mode_changed)
         self._reference_mode.hide()
         self._capture_button = QPushButton("发送")
         self._capture_button.setProperty("role", "transfer")
@@ -324,7 +319,6 @@ class MoriDocker(DockWidget):
         self._mode_button.setText("实时模式" if index == 0 else "工作台")
         self._beta_label.setVisible(index == 0)
         self._title_separator.setVisible(index == 0)
-        self._undock_button.setVisible(True)
         self._arrange_workbench_toolbar()
         self._status_label.setVisible(index == 1)
         self._schedule_surface()
@@ -439,6 +433,10 @@ class MoriDocker(DockWidget):
 
     def _automatic_updates_changed(self, enabled):
         self._settings.setValue("automaticUpdates", enabled)
+
+    def _reference_mode_changed(self):
+        if hasattr(self, "_realtime"):
+            self._realtime_panel.parameters_changed.emit()
 
     def _restore_realtime_preferences(self):
         panel = self._realtime_panel

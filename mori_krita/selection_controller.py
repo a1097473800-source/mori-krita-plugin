@@ -869,7 +869,7 @@ class SelectionController(QObject):
             model = next((item for item in self._config.get("models", []) if item["id"] == payload.get("model")), {})
             payload = dict(payload, available_aspects=model.get("aspects"),
                            expected_epoch=gateway.epoch, expected_user_id=gateway.client.user_id,
-                           reference_mode=self.docker._settings.value("referenceMode", "fast", type=str))
+                           reference_mode=self.docker._settings.value("referenceMode", "original", type=str))
         except Exception as error:
             self.panel.set_status(str(error), error=True)
             return

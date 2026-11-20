@@ -320,13 +320,14 @@ class SettingsDialog(QDialog):
         quality_row.setSpacing(10)
         self.reference_group = QButtonGroup(self)
         self.reference_cards = []
-        for index, (title, hint) in enumerate((("快速参考", "压缩上传副本，适合日常创作。\n最长边 2048 px，保留透明度。"),
-                                                ("原图无损", "按原始尺寸上传。\n适合细节丰富的图片。"))):
-            card = ChoiceCard(title, hint, index == 0)
+        for index, (title, hint) in enumerate((("快速参考", "缩小并压缩上传副本，节省时间。\n细节可能减少，保留透明度。"),
+                                                ("原图无损", "原始尺寸 · 无损 PNG。\n保留线稿、文字与纹理细节。"))):
+            card = ChoiceCard(title, hint, index == 1)
             self.reference_group.addButton(card, index)
             self.reference_cards.append(card)
             quality_row.addWidget(card, 1)
         layout.addLayout(quality_row)
+        layout.addWidget(label("用于工作台、实时与选区的参考图上传；生成分辨率在生成面板中单独选择。", "SettingsTip"))
         card, rows = self._card()
         self.transfer_source = self._combo()
         self._row(rows, "默认发送范围", "在工作台工具栏中也可随时切换。", self.transfer_source)
@@ -439,7 +440,7 @@ class SettingsDialog(QDialog):
     def reset_current_page(self):
         dock, panel = self.docker, self.docker._realtime_panel
         if self.current_page == "canvas":
-            dock._reference_mode.setCurrentIndex(0)
+            dock._reference_mode.setCurrentIndex(1)
             dock._source.setCurrentIndex(0)
             dock._auto.setChecked(True)
         elif self.current_page == "realtime":

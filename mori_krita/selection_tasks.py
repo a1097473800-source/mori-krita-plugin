@@ -217,13 +217,13 @@ class SelectionTask:
             from .selection_edit import prepare_selection_edit
             prepared = self._timed_call("prepare_ms", prepare_selection_edit, self.snapshot,
                                         aspect=settings["aspect"], resolution=settings["resolution"],
-                                        mode=self.payload.get("reference_mode", "fast"))
+                                        mode=self.payload.get("reference_mode", "original"))
         else:
             if prepare is None:
                 from .krita_bridge import prepare_reference
                 prepare = prepare_reference
             prepared = self._timed_call("prepare_ms", prepare, self.snapshot,
-                                        mode=self.payload.get("reference_mode", "fast"))
+                                        mode=self.payload.get("reference_mode", "original"))
         mapping = getattr(prepared, "mapping", None)
         if mapping is not None:
             mapping.assert_target(self.snapshot.target)

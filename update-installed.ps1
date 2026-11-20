@@ -17,7 +17,7 @@ if (-not $destination.StartsWith($resourceRoot.TrimEnd('\') + '\', [System.Strin
 }
 $versionPattern = '(?m)^\s*VERSION\s*=\s*"([0-9]+\.[0-9]+\.[0-9]+)"\s*$'
 # Only the listed releases share the frontend/runtime contract of this small update.
-$supportedInstalledVersions = @('0.3.0','0.3.1','0.3.2','0.3.3','0.3.4','0.3.5','0.3.6','0.3.7','0.4.0','0.4.1','0.4.2','0.4.3','0.4.4','0.4.5','0.4.6','0.4.7','0.4.8','0.4.9','0.4.10')
+$supportedInstalledVersions = @('0.3.0','0.3.1','0.3.2','0.3.3','0.3.4','0.3.5','0.3.6','0.3.7','0.4.0','0.4.1','0.4.2','0.4.3','0.4.4','0.4.5','0.4.6','0.4.7','0.4.8','0.4.9','0.4.10','0.4.11')
 $sourceRoot = Join-Path $PSScriptRoot 'mori_krita'
 $layoutSource = Join-Path $PSScriptRoot 'windowlayouts\Mori 工作台.kwl'
 $layoutDestination = Join-Path $resourceRoot 'windowlayouts\Mori 工作台.kwl'

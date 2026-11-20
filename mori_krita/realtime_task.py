@@ -141,9 +141,10 @@ def run_realtime_task(gateway, snapshots, settings, *, expected_identity,
         conditioned = [(index, snapshot) for index, snapshot in enumerate(snapshots)
                        if variation < 100 or getattr(snapshot.target, "layer_id", None) in assigned]
         prepared = []
+        reference_mode = settings.get("reference_mode", "original")
         for index, snapshot in conditioned:
             check()
-            prepared.append(prepare(snapshot, mode="fast"))
+            prepared.append(prepare(snapshot, mode=reference_mode))
         digests = [hashlib.sha256(item.image_bytes).hexdigest() for item in prepared]
         identity_settings = {**settings, "count": 1}
         signature = hashlib.sha256(json.dumps(
@@ -153,7 +154,7 @@ def run_realtime_task(gateway, snapshots, settings, *, expected_identity,
             return {"status": "unchanged", "signature": signature,
                     "elapsed_seconds": time.monotonic() - started}
         check()
-        api_settings = {key: value for key, value in identity_settings.items() if key != "variation"}
+        api_settings = {key: value for key, value in identity_settings.items() if key not in ("variation", "reference_mode")}
         estimate = client.quote(api_settings)
         check()
         if estimate.get("enforcement"):

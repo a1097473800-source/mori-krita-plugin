@@ -66,7 +66,7 @@ def main(arguments):
                 dock.ensurePolished()
                 dock.grab().save(str(output / ("dock-" + str(mode) + "-" + str(width) + ".png")))
                 title = dock._titlebar
-                controls = (dock._settings_entry, dock._undock_button)
+                controls = (dock._settings_entry,)
                 if mode == 1:
                     controls += (dock._source, dock._capture_button, dock._import_button)
                 positions = []

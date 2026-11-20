@@ -50,6 +50,7 @@ class SettingsUiTests(unittest.TestCase):
     def test_canvas_preferences_drive_transfer_and_persist(self):
         gateway = mock.Mock()
         self.dock._gateway = gateway
+        self.dialog.reference_cards[0].click()
         self.dialog.reference_cards[1].click()
         self.dialog.transfer_source.setCurrentIndex(self.dialog.transfer_source.findData("selection"))
         self.dialog.auto_import.click()
@@ -60,6 +61,14 @@ class SettingsUiTests(unittest.TestCase):
         self.assertEqual(self.settings.value("referenceMode"), "original")
         self.assertEqual(self.settings.value("transferSource"), "selection")
         self.assertFalse(self.settings.value("autoImport"))
+
+    def test_original_is_default_and_shared_by_realtime_but_fast_remains_available(self):
+        self.assertEqual(self.dock._reference_mode.currentData(), "original")
+        self.assertEqual(self.dock._realtime._settings()["reference_mode"], "original")
+        self.dialog.reference_cards[0].click()
+        self.assertEqual(self.dock._realtime._settings()["reference_mode"], "fast")
+        self.dialog.reset.click()
+        self.assertEqual(self.dock._realtime._settings()["reference_mode"], "original")
 
     def test_toolbar_and_document_layer_changes_refresh_the_open_settings(self):
         self.dock._source.setCurrentIndex(3)
