@@ -61,11 +61,13 @@ class SelectionController(QObject):
         self._panel_touch_down = False
         self._panel_key_release = None
         self._settle_until = 0.0
+        self._settle_retry_until = 0.0
         self._drag_paused = False
         self._drag_origin = None
         self._drag_distance = QApplication.startDragDistance()
         self._last_context = None
         self._last_bounds = None
+        self._selection_key = None
         self._pending_progress = None
         self._pending_config = None
         self._pending_quote = None
@@ -230,21 +232,51 @@ class SelectionController(QObject):
         self._drag_paused = False
         self._drag_origin = None
         self._timer.stop()
-        self._settle_until = time.monotonic() + 0.18
-        self._settle_timer.start(180)
+        now = time.monotonic()
+        self._settle_until = now + 0.04
+        self._settle_retry_until = now + 0.4
+        self._settle_timer.start(40)
 
     def _settled(self):
         if self._closed or not self.enabled:
             return
         if self._pointer_down or self._tablet_down or self._touch_down:
             return
+        self._settle_timer.stop()
         remaining = self._settle_until - time.monotonic()
         if remaining > 0:
             self._settle_timer.start(max(1, int(remaining * 1000) + 1))
             return
         self.refresh()
-        if not self._closed and self.enabled and not self._drag_paused:
+        if (not self._closed and self.enabled and not self._drag_paused
+                and not self._settle_timer.isActive()):
             self._timer.start()
+
+    def _prepare_panel(self, canvas):
+        if self.panel is not None:
+            return
+        self.panel = SelectionComposer(canvas)
+        self.panel.hide()
+        self._last_context = None
+        self._last_bounds = None
+        self.panel.submitted.connect(self.submit)
+        self.panel.cancelRequested.connect(self.cancel)
+        self.panel.collapsedChanged.connect(self._collapsed)
+        self.panel.settingsChanged.connect(self._settings_changed)
+        try:
+            self.panel.set_settings(json.loads(self.docker._settings.value("selectionSettings", "{}", type=str)))
+        except (ValueError, TypeError):
+            pass
+        self.panel.ensurePolished()
+        self.panel.layout().activate()
+
+    def warmup(self):
+        """Prepare the hidden editor while idle, without reading image data."""
+        if self._closed or not self.enabled or self._interaction_busy() or not self._owner_active():
+            return
+        self._bind_input_scope()
+        if is_alive(self._input_canvas):
+            self._prepare_panel(self._input_canvas)
 
     def _panel_input_owner(self, watched, event):
         """Return receiver ownership (1) or a canvas-forwarded panel hit (2)."""
@@ -502,6 +534,7 @@ class SelectionController(QObject):
         try:
             anchor = locate_selection()
             if anchor is None or not anchor.parent.isVisible():
+                self._selection_key = None
                 self.anchor = None
                 self._hide_panel()
                 return
@@ -519,18 +552,7 @@ class SelectionController(QObject):
                 return
             self._apply_pending_ui()
             if self.panel is None:
-                self.panel = SelectionComposer(anchor.parent)
-                self._last_context = None
-                self._last_bounds = None
-                self.panel.submitted.connect(self.submit)
-                self.panel.cancelRequested.connect(self.cancel)
-                self.panel.collapsedChanged.connect(self._collapsed)
-                self.panel.settingsChanged.connect(self._settings_changed)
-                self.panel.set_collapsed(self.docker._settings.value("selectionCollapsed", False, type=bool))
-                try:
-                    self.panel.set_settings(json.loads(self.docker._settings.value("selectionSettings", "{}", type=str)))
-                except (ValueError, TypeError):
-                    pass
+                self._prepare_panel(anchor.parent)
             elif self.panel.parentWidget() is not anchor.parent:
                 self.panel.setParent(anchor.parent)
                 self._last_bounds = None
@@ -540,6 +562,12 @@ class SelectionController(QObject):
                 self._document_key = anchor.document_key
                 self.panel.set_message(self._drafts.get(self._document_key, ""))
             rect = anchor.selection_rect
+            selection_key = (anchor.document_key, rect.x(), rect.y(), rect.width(), rect.height())
+            if selection_key != self._selection_key:
+                self._selection_key = selection_key
+                # Collapse is temporary for this selection, never a global
+                # preference that conceals the next region's editing controls.
+                self.panel.set_collapsed(False)
             if self._pending_progress is not None:
                 self.panel.set_status(self._pending_progress)
                 self._pending_progress = None
@@ -569,8 +597,10 @@ class SelectionController(QObject):
             if gateway is not None and (gateway is not self._config_gateway or gateway.client.user_id != self._config_user) and not self._config_loading:
                 self._load_config(gateway)
         except SelectionBusy:
-            # Krita is still committing a stroke/selection. Keep the last panel
-            # unchanged and let the existing idle/settle timer try again.
+            # Retry shortly after release instead of adding a whole 900 ms idle
+            # interval. Never wait on Krita; a new press cancels this retry.
+            if time.monotonic() < self._settle_retry_until:
+                self._settle_timer.start(32)
             return
         except Exception as error:
             # Native windows can disappear between an active-view query and a
@@ -584,7 +614,6 @@ class SelectionController(QObject):
                     self.panel = None
 
     def _collapsed(self, collapsed):
-        self.docker._settings.setValue("selectionCollapsed", collapsed)
         QTimer.singleShot(0, self.refresh)
 
     def _settings_changed(self, settings):

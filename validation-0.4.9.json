@@ -1,0 +1,65 @@
+{
+  "passed": true,
+  "nativeQt": {
+    "test_update_ui": {
+      "passed": true,
+      "tests": 9,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "test_docker_lifecycle": {
+      "passed": true,
+      "tests": 17,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "test_startup_visibility": {
+      "passed": true,
+      "tests": 7,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "test_realtime": {
+      "passed": true,
+      "tests": 43,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "test_realtime_layout": {
+      "passed": true,
+      "tests": 23,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "test_webview_lifecycle": {
+      "passed": true,
+      "tests": 10,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "passed": true
+  },
+  "publicUpdateChecks": 11,
+  "webUpdateChecks": 30,
+  "cloudGatewayChecks": 6,
+  "apiChecks": 33,
+  "transportChecks": 14,
+  "cloudRefreshChecks": 9,
+  "webBuildChecks": 4,
+  "upgradeAssertions": 1278,
+  "finalArchiveInstall": {
+    "passed": true,
+    "from": "0.4.8",
+    "to": "0.4.9",
+    "verifiedFiles": 67,
+    "userDataPreserved": true,
+    "realUserPluginModified": false
+  },
+  "realPaidModelCalls": 0
+}

@@ -1,7 +1,8 @@
 {
   "schemaVersion": 1,
-  "uiVersion": "20261112-47b5a9ad29df-3111d649a00f",
-  "bridgeMinVersion": "0.4.4",
-  "sourceCommit": "47b5a9ad29df",
-  "sourceDigest": "3111d649a00f4d69aff63648f7f5887abeee08b4154a44df52d46d5a989c5776"
+  "uiVersion": "20261120-source-46242026a08b",
+  "bridgeMinVersion": "0.4.8",
+  "canvasSyncVersion": 1,
+  "sourceCommit": "source",
+  "sourceDigest": "46242026a08b3a723425fa83d5ac9e7d0ccb3d7cb2b19007b0da67899c964790"
 }

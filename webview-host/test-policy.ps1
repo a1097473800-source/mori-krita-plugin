@@ -1,4 +1,4 @@
-﻿param([string]$OutputDirectory = (Join-Path $PSScriptRoot '..\qa\host-policy'))
+param([string]$OutputDirectory = (Join-Path $PSScriptRoot '..\qa\host-policy'))
 $ErrorActionPreference = 'Stop'
 $sdkRoot = Join-Path $PSScriptRoot 'build\deps\1.0.4314.35\lib\net462'
 $core = Join-Path $sdkRoot 'Microsoft.Web.WebView2.Core.dll'

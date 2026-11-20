@@ -1,4 +1,4 @@
-﻿param([string]$OutputDirectory = (Join-Path $PSScriptRoot '..\qa\host-lifecycle'))
+param([string]$OutputDirectory = (Join-Path $PSScriptRoot '..\qa\host-lifecycle'))
 $ErrorActionPreference = 'Stop'
 $sdkRoot = Join-Path $PSScriptRoot 'build\deps\1.0.4314.35\lib\net462'
 $destination = [IO.Path]::GetFullPath($OutputDirectory)

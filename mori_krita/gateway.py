@@ -1,7 +1,7 @@
 """Private loopback transport for the bundled Mori UI.
 
-Remote authentication stays private to the native client. The web canvas is local and account scoped;
-generation, credit settlement, assets and conversations use the existing server.
+Remote authentication stays private to the native client. Canvas documents, assets,
+generation and conversations share the website server and its revision checks.
 No route runs arbitrary Python or exposes filesystem access.
 """
 import concurrent.futures
@@ -190,6 +190,8 @@ class MoriGateway:
         self.event_seq = 0
         self.selected_asset = None
         self.active_canvas = "default"
+        self.cloud_canvas_ids = {"default"}
+        self._legacy_migration = None
         self.assets_by_id = {}
         self.job_targets = {}
         self.request_targets = {}
@@ -359,6 +361,7 @@ class MoriGateway:
                 self.events.clear()
                 self.selected_asset = None
                 self.active_canvas = "default"
+                self.cloud_canvas_ids = {"default"}
                 self.assets_by_id.clear()
                 self.jobs_by_id.clear()
                 self.job_targets.clear()
@@ -653,16 +656,13 @@ class MoriGateway:
         pathname = route.path
         canvas_id = _canvas_id(browser_canvas)
         # Local UI work never waits behind TLS, server polling or image uploads.
-        local = not pathname.startswith(("/api/", "/media/")) or pathname in ("/api/state", "/api/canvases")
+        local = not pathname.startswith(("/api/", "/media/"))
         if local:
             with self.lock:
                 self._sync_identity()
                 self._authorize(pathname, browser_user, enforce_user, method)
                 epoch, key = self.epoch, self._account_key()
-            if pathname == "/api/canvases" and method == "POST":
-                result = self._create_canvas(body, key, epoch)
-            else:
-                result = self._local(method, path, body, key, canvas_id)
+            result = self._local(method, path, body, key, canvas_id)
             with self.lock:
                 self._sync_identity()
                 if self.epoch != epoch and pathname.startswith(("/krita/", "/api/")):
@@ -673,8 +673,6 @@ class MoriGateway:
             self._sync_identity()
             self._authorize(pathname, browser_user, enforce_user, method)
             self._validate_remote(method, pathname)
-            if not pathname.startswith("/api/auth/"):
-                self.store._assert_canvas(self._account_key(), canvas_id)
             if method == "GET" and pathname.startswith("/media/"):
                 cached = self._get_media(path)
                 if cached:
@@ -689,11 +687,18 @@ class MoriGateway:
                 return self._remote(self.client, method, path, body, value, tracked, epoch, canvas_id)
             client = self._channel(canvas_id)
         cacheable = method == "GET" and pathname in ("/api/assets", "/api/jobs", "/api/assistant/commands")
+        if pathname == "/api/canvases" and method == "GET":
+            self._migrate_legacy(client, epoch)
         if cacheable:
             return self._read_once(client, method, path, body, value, tracked, epoch, canvas_id)
         return self._remote(client, method, path, body, value, tracked, epoch, canvas_id)
 
     def _validate_remote(self, method, pathname):
+        canvas_methods = {"/api/state": ("GET", "PUT"), "/api/canvases": ("GET", "POST")}
+        if pathname in canvas_methods:
+            if method not in canvas_methods[pathname]:
+                raise GatewayError("请求方式无效", 405)
+            return
         if pathname == "/api/auth/register" and method != "POST":
             raise GatewayError("注册接口只支持提交注册信息。", 403)
         # New website actions retain explicit methods. This does not open an
@@ -760,7 +765,7 @@ class MoriGateway:
         # switch, while returning only this page's jobs unless history asks all.
         all_jobs = method == "GET" and pathname == "/api/jobs"
         wants_all = parse_qs(urlsplit(path).query).get("scope") == ["all"]
-        if all_jobs and not wants_all and self.store._registry(self._account_key())["documents"]:
+        if all_jobs and not wants_all:
             parts = urlsplit(path)
             query = parse_qs(parts.query)
             query["scope"] = ["all"]
@@ -796,11 +801,15 @@ class MoriGateway:
                             pass
                 if pathname == "/api/auth/session" and isinstance(result, dict):
                     result.setdefault("providers", {})["google"] = False
-                if pathname == "/api/assistant/commands" and isinstance(result, list):
+                # The server scopes commands to the cloud canvas. Filtering by
+                # local jobs would hide changes made in the website.
+                if pathname == "/api/canvases" and isinstance(result, dict):
+                    identifiers = result.get("canvases", []) if method == "GET" else [result]
                     with self.lock:
-                        saved = self.store.get(self._account_key(), canvas_id)
-                        known_jobs = set(self.job_targets) | {n.get("data", {}).get("jobId") for n in saved["nodes"]}
-                        result = [c for c in result if c.get("jobId") in known_jobs]
+                        self.cloud_canvas_ids.update(_canvas_id(item["id"]) for item in identifiers)
+                if pathname == "/api/state" and method == "GET" and isinstance(result, dict):
+                    with self.lock:
+                        self.cloud_canvas_ids.add(canvas_id)
                 if pathname in ("/api/auth/session", "/api/auth/login", "/api/auth/register", "/api/auth/logout"):
                     user = (result.get("user") if isinstance(result, dict) else None) or {}
                     self.notify("已登录 " + (user.get("name") or user.get("email") or "Mori") if user else "请使用 Mori 邮箱账号登录。")
@@ -808,34 +817,42 @@ class MoriGateway:
                     result = [job for job in result if job.get("canvasId", "default") == canvas_id]
             return self._json(result, status)
 
-    def _create_canvas(self, body, account_key, epoch):
-        value = json.loads(body or b"{}")
-        name = value.get("name", "未命名画布") if isinstance(value, dict) else None
-        request_id = value.get("clientRequestId") if isinstance(value, dict) else None
-        if (not isinstance(name, str) or not name.strip() or len(name) > 120
-                or re.search(r"[\x00-\x1f\x7f]", name) or not isinstance(request_id, str)
-                or not re.fullmatch(r"[A-Za-z0-9_-]{8,100}", request_id)
-                or set(value) - {"name", "clientRequestId"}):
-            raise GatewayError("新建画布参数无效。")
-        name = name.strip()
-        existing = self.store.created(account_key, request_id, name)
-        if existing:
-            return self._json(existing)
-        with self.session_lock:
-            self._sync_identity()
-            if self.epoch != epoch:
-                raise GatewayError("账号会话已改变。", 401)
-            client = self._channel()
-        payload = {"name": name, "clientRequestId": request_id}
-        response = self._remote(client, "POST", "/api/canvases", json.dumps(payload).encode(), payload, None, epoch)
-        if not 200 <= response[0] < 300:
-            return response
+    def _assert_cloud_canvas(self, canvas_id):
+        if canvas_id not in self.cloud_canvas_ids:
+            raise GatewayError("请先读取当前账号的云端画布后继续。", 404)
+
+    def _migrate_legacy(self, client, epoch):
+        # Only the library read migrates old local files. Ordinary cloud reads
+        # and saves keep working even when an old local file needs recovery.
+        from .canvas_sync import LegacyCanvasMigration
         with self.lock:
-            self._sync_identity()
-            if self.epoch != epoch:
-                raise GatewayError("账号会话已改变。", 401)
-            summary = self.store.create(account_key, json.loads(response[2]), request_id, name)
-        return self._json(summary, 201)
+            if self._legacy_migration is None:
+                self._legacy_migration = LegacyCanvasMigration(self.store)
+            key = self._account_key()
+        def check():
+            with self.session_lock:
+                self._sync_identity()
+                if self.closed or epoch != self.epoch:
+                    raise GatewayError("账号会话已改变。", 401)
+        def request(method, path, value, canvas_id):
+            check()
+            # A frozen channel per target retains the original signed-in user.
+            factory = getattr(client, "fork_session", None)
+            channel = factory() if factory else copy.copy(client)
+            channel._canvas_id = _canvas_id(canvas_id)
+            response = self._remote(channel, method, path,
+                json.dumps(value).encode() if value is not None else None,
+                value or {}, None, epoch, canvas_id)
+            if not 200 <= response[0] < 300:
+                raise GatewayError(json.loads(response[2]).get("error", "旧画布迁移未完成"), response[0])
+            return json.loads(response[2])
+        try:
+            count = self._legacy_migration.run(key, request, check)
+            if count:
+                self.notify("已将 %d 份旧 Krita 画布保存为云端独立副本。" % count)
+        except Exception as error:
+            check()
+            self.notify("旧 Krita 画布迁移未完成，原文件已保留；重新打开工作空间可重试：" + str(error)[:250])
 
     def _local(self, method, path, body, account_key, canvas_id="default"):
         route = urlsplit(path)
@@ -848,27 +865,17 @@ class MoriGateway:
             from urllib.parse import parse_qs
             after = int(parse_qs(route.query).get("after", ["0"])[0])
             with self.lock:
-                self.store._assert_canvas(account_key, canvas_id)
+                self._assert_cloud_canvas(canvas_id)
                 self.active_canvas = canvas_id
                 return self._json([e for e in self.events if e["seq"] > after
                                    and (e.get("canvasId", "default") == canvas_id or e["type"] == "status")])
         if pathname == "/krita/selection" and method == "POST":
             value = json.loads(body or b"{}")
             with self.lock:
-                self.store._assert_canvas(account_key, canvas_id)
+                self._assert_cloud_canvas(canvas_id)
                 self.active_canvas = canvas_id
                 self.selected_asset = value.get("assetId")
             return self._json({"ok": True})
-        if pathname == "/api/state":
-            if method == "GET":
-                return self._json(self.store.get(account_key, canvas_id))
-            if method == "PUT":
-                return self._json(self.store.put(account_key, json.loads(body or b"{}"), canvas_id))
-            raise GatewayError("请求方式无效", 405)
-        if pathname == "/api/canvases":
-            if method == "GET":
-                return self._json(self.store.list(account_key, self.assets_by_id))
-            raise GatewayError("请求方式无效", 405)
         if method != "GET":
             raise GatewayError("请求方式无效", 405)
         name = unquote(pathname).lstrip("/") or "index.html"

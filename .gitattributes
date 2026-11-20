@@ -8,3 +8,7 @@
 *.dll binary
 *.png binary
 *.woff2 binary
+
+# Generated releases are verified byte-for-byte by the installer.
+mori_krita/web/** -text
+mori_krita/webview-host/** -text

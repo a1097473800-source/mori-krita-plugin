@@ -55,11 +55,11 @@ class DockerLifecycleTests(unittest.TestCase):
         self.docker._gateway = gateway
         return gateway, closed
 
-    def test_removed_overlay_does_not_install_canvas_listeners(self):
-        self.assertFalse(hasattr(self.docker, "_selection"))
-        self.assertFalse(self.docker.findChildren(fixture.controller_module.SelectionController))
-        self.assertNotIn("选区栏", [action.text() for menu in self.docker.findChildren(docker_module.QMenu)
-                                   for action in menu.actions()])
+    def test_installed_selection_assistant_remains_available_after_update(self):
+        self.assertTrue(hasattr(self.docker, "_selection"))
+        self.assertTrue(self.docker.findChildren(fixture.controller_module.SelectionController))
+        self.assertIn("选区栏", [action.text() for menu in self.docker.findChildren(docker_module.QMenu)
+                                for action in menu.actions()])
 
     def test_deleted_realtime_panel_does_not_interrupt_remaining_shutdown(self):
         controller = self.docker._realtime
@@ -166,12 +166,16 @@ class DockerLifecycleTests(unittest.TestCase):
         bridge.capture.assert_not_called()
         bridge.snapshot.assert_not_called()
 
-    def test_removed_overlay_operations_cannot_import_an_image(self):
+    def test_selection_assistant_delivery_keeps_existing_bridge_routes(self):
         gateway, _ = self.attach_gateway()
         self.docker._bridge = mock.Mock()
-        for operation in ("selection_mapping", "selection_result"):
-            with self.assertRaisesRegex(RuntimeError, "不支持"):
-                self.docker._ui_operation(operation, {"gateway_id": id(gateway)})
+        data = {"gateway_id": id(gateway)}
+        with mock.patch.object(self.docker._selection, "register_mapping") as register, \
+                mock.patch.object(self.docker._selection, "deliver") as deliver:
+            self.docker._ui_operation("selection_mapping", data)
+            self.docker._ui_operation("selection_result", data)
+            register.assert_called_once_with(data)
+            deliver.assert_called_once_with(data)
         self.docker._bridge.import_png.assert_not_called()
 
     def test_manual_selection_capture_remains_available(self):
@@ -236,7 +240,7 @@ class DockerLifecycleTests(unittest.TestCase):
             worker["done"]()
             start.assert_not_called()
         self.assertEqual(gateway.web_root, Path("old-web"))
-        self.assertIn("重连", self.docker._status_label.text())
+        self.assertIn("重开 Krita", self.docker._web_update_message)
 
     def test_update_worker_after_connection_change_cannot_open_old_gateway(self):
         gateway, worker = self.run_web_check()
@@ -270,7 +274,7 @@ class DockerLifecycleTests(unittest.TestCase):
             worker["done"]()
             start.assert_called_once_with(gateway.url)
         self.assertEqual(gateway.web_root, Path("old-web"))
-        self.assertIn("随插件安装", self.docker._status_label.text())
+        self.assertIn("随插件安装", self.docker._web_update_message)
 
 
 def main(arguments):
