@@ -17,7 +17,7 @@ if (-not $destination.StartsWith($resourceRoot.TrimEnd('\') + '\', [System.Strin
 }
 $versionPattern = '(?m)^\s*VERSION\s*=\s*"([0-9]+\.[0-9]+\.[0-9]+)"\s*$'
 # Only the listed releases share the frontend/runtime contract of this small update.
-$supportedInstalledVersions = @('0.3.0','0.3.1','0.3.2','0.3.3','0.3.4','0.3.5','0.3.6','0.3.7','0.4.0','0.4.1','0.4.2','0.4.3','0.4.4','0.4.5','0.4.6','0.4.7')
+$supportedInstalledVersions = @('0.3.0','0.3.1','0.3.2','0.3.3','0.3.4','0.3.5','0.3.6','0.3.7','0.4.0','0.4.1','0.4.2','0.4.3','0.4.4','0.4.5','0.4.6','0.4.7','0.4.8','0.4.9','0.4.10','0.4.11')
 $sourceRoot = Join-Path $PSScriptRoot 'mori_krita'
 $layoutSource = Join-Path $PSScriptRoot 'windowlayouts\Mori 工作台.kwl'
 $layoutDestination = Join-Path $resourceRoot 'windowlayouts\Mori 工作台.kwl'
@@ -124,7 +124,7 @@ function Get-MoriUpdateReport {
         NativeImageWorkflowFixed=($tasks.Contains('def _finish_expected_image(') -and $tasks.Contains('timings_ms') -and $composer.Contains('payload["expect_image"] = True'))
         WebUpdatesSupported=((Test-Path -LiteralPath (Join-Path $Directory 'web_updates.py')) -and $docker.Contains('WebUpdateManager'))
         SmartToolsCompatible=($gateway.Contains('(?:tool-preview|run)') -and $gateway.Contains('/api/tool-library/capabilities') -and $gateway.Contains('(?:cmf-analysis|design-analysis)') -and $gateway.Contains('(?:tool-library/tools|community/items)'))
-        BrowserShutdownFixed=($nativeHost.Verified -and $nativeHost.Version -in @('0.4.6','0.4.7'))
+        BrowserShutdownFixed=($nativeHost.Verified -and $nativeHost.Version -in @('0.4.6','0.4.7','0.4.8','0.4.9'))
         AspectRatioPreserved=($bridge.Contains('def _fit_import_image(') -and $bridge.Contains('scale = min(width / image.width(), height / image.height())') -and $bridge.Contains('image = _fit_import_image(image, target.width, target.height)') -and -not $bridge.Contains('image.scaled(target.width, target.height, Qt.IgnoreAspectRatio'))
         NativeHost=$nativeHost
         FileSHA256=$hashes

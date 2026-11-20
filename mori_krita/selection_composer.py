@@ -7,9 +7,8 @@ It installs no application-wide shortcuts or input filters.
 from __future__ import annotations
 from pathlib import Path
 
-from PyQt5.QtCore import (QAbstractAnimation, QEasingCurve, QEvent,
-                          QPropertyAnimation, QSize, Qt, pyqtProperty, pyqtSignal)
-from PyQt5.QtGui import QIcon, QRegion
+from PyQt5.QtCore import QEvent, QSize, Qt, pyqtSignal
+from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import (QAction, QActionGroup, QApplication, QFrame,
                             QHBoxLayout, QLabel, QMenu, QPlainTextEdit,
                             QSizePolicy, QStyle, QToolButton, QVBoxLayout, QWidget)
@@ -87,11 +86,6 @@ class SelectionComposer(QFrame):
         self._quote = ""
         self._status_text = ""
         self._error = False
-        self._reveal_height = 0
-        self._reveal_animation = QPropertyAnimation(self, b"revealHeight", self)
-        self._reveal_animation.setDuration(140)
-        self._reveal_animation.setEasingCurve(QEasingCurve.OutCubic)
-        self._reveal_animation.finished.connect(self.clearMask)
 
         outer = QVBoxLayout(self)
         outer.setContentsMargins(0, 0, 0, 0)
@@ -279,36 +273,15 @@ class SelectionComposer(QFrame):
     def is_busy(self):
         return self._busy
 
-    @pyqtProperty(int)
-    def revealHeight(self):
-        return self._reveal_height
-
-    @revealHeight.setter
-    def revealHeight(self, height):
-        self._reveal_height = int(height)
-        self.setMask(QRegion(0, 0, self.width(), max(1, min(self.height(), int(height)))))
-
-    def _animations_enabled(self):
-        return QApplication.isEffectEnabled(Qt.UI_General)
-
     def reveal(self):
-        """Show once, revealing a fixed layout without moving the canvas child."""
+        """Show the complete card immediately, without animating a canvas mask."""
         if not is_alive(self) or not self.isHidden():
             return
         self.cancel_reveal()
-        if not is_alive(self._reveal_animation) or not self._animations_enabled():
-            self.show()
-            return
-        self.revealHeight = min(8, self.height())
         self.show()
-        self._reveal_animation.setStartValue(self.revealHeight)
-        self._reveal_animation.setEndValue(self.height())
-        self._reveal_animation.start()
 
     def cancel_reveal(self):
-        """Stop immediately before hiding or changing the card dimensions."""
-        if is_alive(self._reveal_animation):
-            self._reveal_animation.stop()
+        """Clear any clipping before hiding or changing the card dimensions."""
         if is_alive(self):
             self.clearMask()
 
@@ -536,9 +509,6 @@ class SelectionComposer(QFrame):
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
-        if (is_alive(self._reveal_animation)
-                and self._reveal_animation.state() == QAbstractAnimation.Running):
-            self.cancel_reveal()
         self._refresh_labels()
 
     def hideEvent(self, event):

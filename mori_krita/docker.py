@@ -3,13 +3,15 @@ import concurrent.futures
 from pathlib import Path
 import sys
 import threading
+from datetime import datetime
 
 from PyQt5.QtCore import (QObject, PYQT_VERSION_STR, QT_VERSION_STR, QSettings, QSize,
-                          QStandardPaths, QThread, QTimer, Qt, pyqtSignal)
+                          QStandardPaths, QThread, QTimer, Qt, QUrl, pyqtSignal)
+from PyQt5.QtGui import QDesktopServices
 from PyQt5.QtWidgets import (QApplication, QCheckBox, QComboBox, QHBoxLayout, QInputDialog,
                             QLabel, QMessageBox, QPushButton, QVBoxLayout, QWidget,
                             QStackedWidget, QToolButton, QMenu, QAction, QActionGroup,
-                            QSizePolicy, QTabBar)
+                            QSizePolicy)
 from krita import DockWidget, Krita
 
 from .api import MoriClient
@@ -20,9 +22,12 @@ from .qt_lifetime import is_alive
 from .session_store import WindowsSessionStore
 from .version import VERSION
 from .web_updates import WebUpdateManager
+from .plugin_updates import PluginUpdateManager, PluginUpdateResult, RELEASES_URL, release_url
+from .settings_dialog import SettingsDialog, SettingsEntry
 from .realtime_panel import (RealtimePanel, MORI_STYLE, set_dark_surface, icon_button,
                              ui_icon, _CompactComboBox)
 from .realtime_controller import RealtimeController
+from .selection_controller import SelectionController
 
 
 class GuiDispatch(QObject):
@@ -92,6 +97,7 @@ class MoriDocker(DockWidget):
         set_dark_surface(self)
         self._gateway = None
         self._closing = False
+        self._dock_exposed = False
         self._started = False
         self._web_started = False
         self._capturing = False
@@ -99,6 +105,14 @@ class MoriDocker(DockWidget):
         self._web_update_pending = False
         self._web_update_message = ""
         self._web_ui_version = "随插件安装"
+        self._web_open_after_update = False
+        self._web_update_available = False
+        self._plugin_update_pending = False
+        self._plugin_update_cancel = None
+        self._plugin_update_result = None
+        self._plugin_release = None
+        self._settings_dialog = None
+        self._update_checked_at = ""
         self._settings = QSettings("Mori", "KritaPlugin")
         self._bridge = KritaBridge()
         self._pool = concurrent.futures.ThreadPoolExecutor(max_workers=2, thread_name_prefix="Mori toolbar")
@@ -146,28 +160,19 @@ class MoriDocker(DockWidget):
             self._mode_group.addAction(action)
             action.triggered.connect(lambda checked, selected=index: self._set_mode(selected))
             self._mode_actions.append(action)
-        mode_menu.addSeparator()
-        menu = mode_menu.addMenu("设置")
-        menu.addAction("实时参数…", lambda: self._realtime_panel.show_options(self._mode_button))
-        menu.addAction("刷新图层与连接", lambda: self._realtime_panel.refresh.click())
-        menu.addAction("登录 Mori…", lambda: self._realtime_panel.login.click())
-        menu.addSeparator()
         title_layout.addWidget(self._mode_button)
         self._beta_label = QLabel("BETA")
         self._beta_label.setObjectName("MoriBeta")
         self._beta_label.setToolTip("实时模式 · BETA 测试")
         title_layout.addWidget(self._beta_label)
         title_layout.addStretch()
-        undock = icon_button("float", "浮动 / 停靠面板", titlebar)
-        self._undock_button = undock
-        undock.setProperty("role", "window")
-        undock.setFixedSize(24, 24)
-        undock.clicked.connect(lambda: self.setFloating(not self.isFloating()))
+        self._settings_entry = SettingsEntry(titlebar)
+        self._settings_entry.clicked.connect(lambda: self._show_settings())
+        title_layout.addWidget(self._settings_entry)
         close = icon_button("close", "关闭 Mori 面板", titlebar)
         close.setProperty("role", "window")
         close.setFixedSize(24, 24)
         close.clicked.connect(self.close)
-        title_layout.addWidget(undock)
         title_layout.addWidget(close)
         self.setTitleBarWidget(titlebar)
 
@@ -178,24 +183,12 @@ class MoriDocker(DockWidget):
         self._auto.hide()
         self._auto.setChecked(self._settings.value("autoImport", True, type=bool))
         self._auto.toggled.connect(self._auto_changed)
-        for checkbox in (self._auto,):
-            action = menu.addAction(checkbox.text())
-            action.setCheckable(True)
-            action.setChecked(checkbox.isChecked())
-            action.toggled.connect(checkbox.setChecked)
-            checkbox.toggled.connect(action.setChecked)
-        menu.addSeparator()
-        menu.addAction("服务器地址…", self._change_server)
-        self._update_button = QAction("检查工作台更新", menu)
-        self._update_button.setToolTip("检查 Krita 工作台网页更新；插件原生功能通过安装包升级")
-        self._update_button.triggered.connect(self._check_web_updates)
-        menu.addAction(self._update_button)
-        menu.addAction("重新连接", self._reconnect)
-
         self._pages = QStackedWidget(main)
         set_dark_surface(self._pages)
         self._realtime_panel = RealtimePanel(self._pages)
         self._pages.addWidget(self._realtime_panel)
+        self._restore_realtime_preferences()
+        self._realtime_panel.settings_requested.connect(lambda: self._show_settings("realtime"))
         workbench = QWidget(self._pages)
         workbench.setObjectName("MoriSurface")
         set_dark_surface(workbench)
@@ -221,16 +214,21 @@ class MoriDocker(DockWidget):
         self._source.addItem("当前图层", "layer")
         self._source.addItem("整个画布", "canvas")
         self._source.setToolTip("自动识别：优先选区，其次当前有内容的图层，最后整个画布。导入图片会直接显示在 Mori 画布。")
+        saved_source = self._settings.value("transferSource", "auto", type=str)
+        self._source.setCurrentIndex(max(0, self._source.findData(saved_source)))
+        self._source.currentIndexChanged.connect(
+            lambda: self._settings.setValue("transferSource", self._source.currentData()))
         actions.addWidget(self._source)
         actions.addStretch()
         self._reference_mode = QComboBox(workbench)
         self._reference_mode.addItem("快速参考", "fast")
         self._reference_mode.addItem("原图无损", "original")
-        self._reference_mode.setToolTip("快速参考缩小上传副本，最长边 2048、最多 400 万像素；透明度保留。Krita 原图和结果图层尺寸不变。")
-        saved_mode = self._settings.value("referenceMode", "fast", type=str)
+        self._reference_mode.setToolTip("原图无损按原始尺寸上传 PNG；快速参考会缩小并可能有损压缩。此项控制参考图上传，不改变生成输出分辨率。")
+        saved_mode = self._settings.value("referenceMode", "original", type=str)
         self._reference_mode.setCurrentIndex(1 if saved_mode == "original" else 0)
         self._reference_mode.currentIndexChanged.connect(
             lambda: self._settings.setValue("referenceMode", self._reference_mode.currentData()))
+        self._reference_mode.currentIndexChanged.connect(self._reference_mode_changed)
         self._reference_mode.hide()
         self._capture_button = QPushButton("发送")
         self._capture_button.setProperty("role", "transfer")
@@ -250,26 +248,6 @@ class MoriDocker(DockWidget):
         self._import_button.setToolTip("将 Mori 画布选中的图片放入当前 Krita 文档的新图层")
         self._import_button.clicked.connect(self._import_selected)
         actions.addWidget(self._import_button)
-        self._workbench_options = icon_button("more", "更多选项", workbench)
-        self._workbench_options.setObjectName("MoriTransferOptions")
-        self._workbench_options.setPopupMode(QToolButton.InstantPopup)
-        quality_menu = QMenu(self._workbench_options)
-        quality_group = QActionGroup(self)
-        quality_group.setExclusive(True)
-        self._reference_actions = []
-        for index in range(self._reference_mode.count()):
-            action = quality_menu.addAction(self._reference_mode.itemText(index))
-            action.setCheckable(True)
-            action.setChecked(index == self._reference_mode.currentIndex())
-            quality_group.addAction(action)
-            action.triggered.connect(lambda checked, selected=index: self._reference_mode.setCurrentIndex(selected))
-            self._reference_actions.append(action)
-        self._reference_mode.currentIndexChanged.connect(
-            lambda index: self._reference_actions[index].setChecked(True))
-        quality_menu.addSeparator()
-        quality_menu.addAction("浮动 / 停靠面板", lambda: self.setFloating(not self.isFloating()))
-        self._workbench_options.setMenu(quality_menu)
-        actions.addWidget(self._workbench_options)
         workbench_layout.addWidget(self._workbench_toolbar)
 
         self._web = WebCanvas(workbench)
@@ -286,87 +264,65 @@ class MoriDocker(DockWidget):
         self._status_label.setTextInteractionFlags(Qt.TextSelectableByMouse)
         layout.addWidget(self._status_label)
         self._status_label.hide()
-        # The automatic selection overlay has been removed. In particular, do
-        # not construct its timers or install Python input filters on the canvas.
-        # Explicit selection capture remains available from the workbench.
+        self._selection = SelectionController(self)
         self._realtime = RealtimeController(self, self._realtime_panel)
         self._surface_timer = QTimer(self)
         self._surface_timer.setSingleShot(True)
         self._surface_timer.timeout.connect(self._settle_surface)
-        # A QDockWidget can stay visible while another tabified dock becomes
-        # the current tab.  Qt then does not reliably send hideEvent to this
-        # dock, while the WebView2 child HWND remains visible because it lives
-        # in another process.  Reconcile the effective tab visibility at a
-        # low frequency so the native child cannot cover a sibling docker.
-        self._visibility_guard = QTimer(self)
-        self._visibility_guard.setInterval(150)
-        self._visibility_guard.timeout.connect(self._sync_embedded_visibility)
-        self._visibility_guard.start()
         self.topLevelChanged.connect(self._schedule_surface)
         self.dockLocationChanged.connect(self._schedule_surface)
-        self.topLevelChanged.connect(self._sync_embedded_visibility)
-        self.dockLocationChanged.connect(self._sync_embedded_visibility)
-        self.visibilityChanged.connect(self._sync_embedded_visibility)
-        self.visibilityChanged.connect(self._schedule_surface)
+        self.visibilityChanged.connect(self._dock_visibility_changed)
         QApplication.instance().aboutToQuit.connect(self.shutdown)
         self.destroyed.connect(lambda: self.shutdown())
+        self._update_timer = QTimer(self)
+        self._update_timer.setSingleShot(True)
+        self._update_timer.timeout.connect(self._automatic_update_check)
+        self._update_timer_started = True
+        self._update_timer.start(5000)
 
     def showEvent(self, event):
         super().showEvent(event)
+        if not self._update_timer_started:
+            self._update_timer_started = True
+            self._update_timer.start(5000)
         self._schedule_surface()
-        if hasattr(self, "_web"):
-            self._sync_embedded_visibility()
+        self._sync_page_visibility()
+        if hasattr(self, "_selection"):
+            QTimer.singleShot(0, self._selection.warmup)
         if not self._started:
             self._started = True
             QTimer.singleShot(0, self._start)
         elif hasattr(self, "_realtime"):
-            QTimer.singleShot(0, lambda: self._realtime.set_active(self._pages.currentIndex() == 0))
+            QTimer.singleShot(0, self._sync_page_visibility)
 
     def hideEvent(self, event):
-        if hasattr(self, "_realtime"):
-            self._realtime.set_active(False)
-        if hasattr(self, "_web"):
-            self._web.set_active(False)
+        self._dock_visibility_changed(False)
         super().hideEvent(event)
 
-    def _is_current_dock_tab(self):
-        """Return whether this dock is the selected tab in a tabified stack."""
-        if self.isFloating():
-            return True
-        try:
-            main = self.window()
-            title = self.windowTitle()
-            for tabbar in main.findChildren(QTabBar):
-                for index in range(tabbar.count()):
-                    text = tabbar.tabText(index).replace("&", "").strip()
-                    if text == title or text.startswith("Mori 画布"):
-                        return tabbar.currentIndex() == index
-        except (RuntimeError, AttributeError):
-            pass
-        # A non-tabified dock has no QTabBar and is therefore current.
-        return True
+    def _dock_visibility_changed(self, exposed):
+        # Tabbed QDockWidgets can remain isVisible() while another tab is
+        # exposed. The external native WebView must follow this signal.
+        self._dock_exposed = bool(exposed)
+        self._sync_page_visibility()
+        self._schedule_surface()
 
-    def _sync_embedded_visibility(self, *unused):
-        """Mirror the selected dock tab into the external WebView2 host."""
-        if self._closing or not hasattr(self, "_web"):
-            return
-        active = (self.isVisible()
-                  and self._pages.currentIndex() == 1
-                  and self._is_current_dock_tab())
-        self._web.set_active(active)
+    def _sync_page_visibility(self):
+        active = self._dock_exposed and not self._closing
+        if hasattr(self, "_web"):
+            self._web.set_active(active and self._pages.currentIndex() == 1)
+        if hasattr(self, "_realtime"):
+            self._realtime.set_active(active and self._pages.currentIndex() == 0)
 
     def _set_mode(self, index):
         self._pages.setCurrentIndex(index)
-        self._sync_embedded_visibility()
         self._mode_actions[index].setChecked(True)
         self._mode_button.setText("实时模式" if index == 0 else "工作台")
         self._beta_label.setVisible(index == 0)
         self._title_separator.setVisible(index == 0)
-        self._undock_button.setVisible(index == 0)
         self._arrange_workbench_toolbar()
         self._status_label.setVisible(index == 1)
         self._schedule_surface()
-        self._realtime.set_active(index == 0 and self.isVisible())
+        self._sync_page_visibility()
         if index == 1:
             self._start()
             self._status("Mori 工作台")
@@ -375,7 +331,7 @@ class MoriDocker(DockWidget):
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
-        if hasattr(self, "_workbench_options"):
+        if hasattr(self, "_workbench_toolbar"):
             self._arrange_workbench_toolbar()
 
     def _arrange_workbench_toolbar(self):
@@ -389,13 +345,13 @@ class MoriDocker(DockWidget):
             self._toolbar_inline = inline
             if inline:
                 self._workbench_layout.removeWidget(toolbar)
-                self._title_layout.insertWidget(self._title_layout.count() - 3, toolbar, 1)
+                self._title_layout.insertWidget(self._title_layout.indexOf(self._settings_entry), toolbar, 1)
                 toolbar.layout().setContentsMargins(12, 0, 4, 0)
             else:
                 self._title_layout.removeWidget(toolbar)
                 self._workbench_layout.insertWidget(0, toolbar)
                 toolbar.layout().setContentsMargins(12, 8, 12, 8)
-        self._title_layout.setStretch(self._title_layout.count() - 3, 0 if inline else 1)
+        self._title_layout.setStretch(4, 0 if inline else 1)
         # QDockWidget reserves its title height from sizeHint(), not just the
         # widget's fixedHeight. Include the breathing room in the real layout
         # hint so a tabbed native dock cannot paint the webview over the buttons.
@@ -427,6 +383,8 @@ class MoriDocker(DockWidget):
         self._settings.setValue("nativePanelLayoutVersion", 1)
 
     def canvasChanged(self, canvas):
+        if hasattr(self, "_selection"):
+            QTimer.singleShot(0, self._selection.warmup)
         if hasattr(self, "_realtime"):
             self._realtime.refresh()
 
@@ -457,8 +415,8 @@ class MoriDocker(DockWidget):
         try:
             gateway = self._ensure_gateway()
             if self._pages.currentIndex() == 0:
-                self._realtime.set_active(self.isVisible())
-            elif not self._web_started and not self._web_update_pending:
+                self._realtime.set_active(self._dock_exposed)
+            elif not self._web_started:
                 self._begin_web_update(gateway, open_after=True)
         except Exception as error:
             self._status("连接未完成：" + str(error))
@@ -466,25 +424,141 @@ class MoriDocker(DockWidget):
     def _web_ready(self):
         self._status(self._web_update_message or "画布已打开。账号、积分和生成使用 Mori 服务器。")
 
-    def _check_web_updates(self):
+    def _automatic_update_check(self):
+        if self._closing:
+            return
+        if self._settings.value("automaticUpdates", True, type=bool):
+            self._check_all_updates()
+        self._update_timer.start(6 * 60 * 60 * 1000)
+
+    def _automatic_updates_changed(self, enabled):
+        self._settings.setValue("automaticUpdates", enabled)
+
+    def _reference_mode_changed(self):
+        if hasattr(self, "_realtime"):
+            self._realtime_panel.parameters_changed.emit()
+
+    def _restore_realtime_preferences(self):
+        panel = self._realtime_panel
+        panel._preferred_quality = self._settings.value("realtimeQuality", "low", type=str)
+        panel._model_changed()
+        delay = self._settings.value("realtimeDelay", 2.0, type=float)
+        panel.delay.setCurrentIndex(max(0, panel.delay.findData(delay)))
+        panel.writeback.setChecked(self._settings.value("realtimeAutoImport", False, type=bool))
+        panel.quality.currentIndexChanged.connect(self._save_realtime_quality)
+        panel.delay.currentIndexChanged.connect(
+            lambda: self._settings.setValue("realtimeDelay", panel.delay.currentData()))
+        panel.writeback.toggled.connect(lambda value: self._settings.setValue("realtimeAutoImport", value))
+
+    def _save_realtime_quality(self):
+        panel = self._realtime_panel
+        if panel.quality.isEnabled() and panel.quality.currentData():
+            self._settings.setValue("realtimeQuality", panel.quality.currentData())
+
+    def _show_settings(self, page=None):
+        if self._closing:
+            return
+        if self._settings_dialog is None or not is_alive(self._settings_dialog):
+            dialog = SettingsDialog(self)
+            updates = dialog.updates
+            updates.check_requested.connect(self._check_all_updates)
+            updates.download_requested.connect(self._download_plugin_update)
+            updates.releases_requested.connect(self._open_releases)
+            updates.automatic_changed.connect(self._automatic_updates_changed)
+            dialog.page_changed.connect(self._settings_page_changed)
+            self._settings_dialog = dialog
+        if page:
+            self._settings_dialog.set_page(page)
+        self._render_updates()
+        self._settings_dialog.show()
+        self._settings_dialog.raise_()
+        self._settings_dialog.activateWindow()
+        self._settings_page_changed(self._settings_dialog.current_page)
+
+    def _show_updates(self):
+        self._show_settings("updates")
+
+    def _settings_page_changed(self, page):
+        if page == "updates" and self._plugin_update_result is None and not self._plugin_update_pending:
+            self._check_all_updates()
+
+    def _open_releases(self):
+        url = self._plugin_release.page_url if self._plugin_release else RELEASES_URL + "/latest"
+        QDesktopServices.openUrl(QUrl(release_url(url)))
+
+    def _download_plugin_update(self):
+        result = self._plugin_update_result
+        if result and result.available and self._plugin_release and self._plugin_release.download_url:
+            QDesktopServices.openUrl(QUrl(release_url(self._plugin_release.download_url, package=True)))
+
+    def _render_updates(self):
+        if self._closing:
+            return
+        native_available = bool(self._plugin_update_result and self._plugin_update_result.available)
+        available = native_available or self._web_update_available
+        self._settings_entry.set_update_available(available)
+        if self._settings_dialog is not None and is_alive(self._settings_dialog):
+            self._settings_dialog.set_update_available(available)
+            self._settings_dialog.updates.render(self._plugin_update_result, self._plugin_release,
+                self._web_ui_version, self._web_update_message,
+                self._plugin_update_pending or self._web_update_pending, self._update_checked_at)
+
+    def _check_all_updates(self):
+        if self._closing:
+            return
+        if not self._plugin_update_pending:
+            cancel = threading.Event()
+            self._plugin_update_cancel = cancel
+            self._plugin_update_pending = True
+            base = self._settings.value("serverUrl", "https://morinet.chat", type=str)
+            result = {}
+
+            def check():
+                try:
+                    result["value"] = PluginUpdateManager(base, VERSION).check(cancel)
+                except Exception:
+                    result["value"] = PluginUpdateResult(None, "插件更新检查未完成，请稍后重试。")
+
+            def done():
+                if self._closing or cancel.is_set() or self._plugin_update_cancel is not cancel:
+                    return
+                self._plugin_update_pending = False
+                value = result.get("value")
+                if value and not value.release and self._plugin_update_result and self._plugin_update_result.available:
+                    value = PluginUpdateResult(self._plugin_release, value.message, True, False)
+                self._plugin_update_result = value
+                if self._plugin_update_result and self._plugin_update_result.release:
+                    self._plugin_release = self._plugin_update_result.release
+                self._update_checked_at = datetime.now().strftime("%Y-%m-%d %H:%M")
+                self._render_updates()
+
+            self._background(check, done)
+        self._check_web_updates(open_after=False)
+        self._render_updates()
+
+    def _check_web_updates(self, checked=False, *, open_after=None):
         if self._closing or self._web_update_pending:
             return
         try:
             gateway = self._ensure_gateway()
-            self._begin_web_update(gateway, open_after=not self._web_started)
+            self._begin_web_update(gateway, open_after=not self._web_started if open_after is None else open_after)
         except Exception as error:
-            self._status("网页更新检查未完成：" + str(error))
+            self._web_update_message = "网页更新检查未完成：" + str(error)
+            self._render_updates()
 
     def _begin_web_update(self, gateway, open_after=False):
-        # A native selection submission can create the gateway without opening
-        # the workbench. Only this explicit workbench path checks for updates.
-        if self._closing or self._web_update_pending or gateway is not self._gateway:
+        if self._closing or gateway is not self._gateway:
+            return
+        self._web_open_after_update = self._web_open_after_update or open_after
+        if self._web_update_pending:
             return
         cancel = threading.Event()
         self._web_update_cancel = cancel
         self._web_update_pending = True
-        self._update_button.setEnabled(False)
-        self._status("正在检查工作台网页更新…")
+        self._web_update_message = "正在检查工作台网页更新…"
+        self._render_updates()
+        if open_after:
+            self._status(self._web_update_message)
         base = gateway.client.base_url
         bundled = Path(__file__).with_name("web")
         storage = Path(QStandardPaths.writableLocation(QStandardPaths.AppLocalDataLocation)) / "mori-krita" / "web-updates"
@@ -494,8 +568,9 @@ class MoriDocker(DockWidget):
             try:
                 # Workbench-first launches need the same read-only connection
                 # probe as live mode before the embedded page sends any POST.
-                gateway.client.session()
-                gateway._sync_identity()
+                if open_after:
+                    gateway.client.session()
+                    gateway._sync_identity()
             except Exception:
                 pass
             try:
@@ -511,24 +586,31 @@ class MoriDocker(DockWidget):
                     or self._web_update_cancel is not cancel):
                 return
             self._web_update_pending = False
-            self._update_button.setEnabled(True)
+            should_open = self._web_open_after_update
+            self._web_open_after_update = False
             value = result.get("value")
             message = "暂时无法检查网页更新，已使用随插件安装的版本。"
             if value is not None:
                 message = value.message
-                if open_after and not self._web_started:
+                if not self._web_started:
                     # No page has loaded from this gateway yet, so static
                     # resources can be selected once without mixing releases.
                     gateway.web_root = value.release.root
                     self._web_ui_version = value.release.ui_version
+                    self._web_update_available = value.updated
                 elif value.updated or value.release.root != gateway.web_root:
-                    message = "新版网页已准备好，点击「重连」后生效 · " + value.release.ui_version
+                    message = "新版网页已下载，保存作品并重开 Krita 后生效 · " + value.release.ui_version
+                    self._web_update_available = True
             self._web_update_message = message
             self._brand.setToolTip("Mori 插件 " + VERSION + "\n工作台网页 " + self._web_ui_version)
-            self._status(message)
-            if open_after and not self._web_started:
+            self._render_updates()
+            if self._pages.currentIndex() == 1:
+                self._status(message)
+            if should_open and not self._web_started:
                 self._web_started = True
                 self._web.start(gateway.url)
+                # The user may have selected another dock during the update.
+                self._sync_page_visibility()
 
         self._background(check, done)
 
@@ -550,7 +632,13 @@ class MoriDocker(DockWidget):
             QMessageBox.warning(self, "服务器地址无效", str(error))
             return
         self._settings.setValue("serverUrl", normalized)
+        if self._plugin_update_cancel is not None:
+            self._plugin_update_cancel.set()
+        self._plugin_update_pending = False
+        self._plugin_update_result = None
+        self._plugin_release = None
         self._reconnect()
+        self._check_all_updates()
 
     def _reconnect(self):
         self._realtime.connection_changed()
@@ -558,7 +646,8 @@ class MoriDocker(DockWidget):
             self._web_update_cancel.set()
         self._web_update_pending = False
         self._web_update_message = ""
-        self._update_button.setEnabled(True)
+        self._web_open_after_update = False
+        self._web_update_available = False
         self._web.stop()
         self._web_started = False
         old = self._gateway
@@ -603,6 +692,13 @@ class MoriDocker(DockWidget):
             return self._bridge.capture(data.get("source", "selection"))
         if operation == "snapshot":
             return self._bridge.snapshot(data.get("source", "selection"))
+        if operation == "selection_mapping":
+            return self._selection.register_mapping(data)
+        if operation == "selection_result":
+            try:
+                return self._selection.deliver(data)
+            except Exception as error:
+                raise self._import_failure(error) from error
         if operation == "import":
             try:
                 gateway = self._gateway
@@ -663,18 +759,25 @@ class MoriDocker(DockWidget):
         if self._closing:
             return
         self._closing = True
-        if is_alive(getattr(self, "_visibility_guard", None)):
-            self._visibility_guard.stop()
+        if is_alive(self._update_timer):
+            self._update_timer.stop()
+        if self._plugin_update_cancel is not None:
+            self._plugin_update_cancel.set()
+        if self._settings_dialog is not None and is_alive(self._settings_dialog):
+            self._settings_dialog.close()
         if self._web_update_cancel is not None:
             self._web_update_cancel.set()
         self._dispatch.shutdown()
         try:
-            self._realtime.shutdown()
+            self._selection.shutdown()
         finally:
             try:
-                self._web.shutdown()
+                self._realtime.shutdown()
             finally:
-                if self._gateway:
-                    gateway, self._gateway = self._gateway, None
-                    threading.Thread(target=gateway.close, daemon=True).start()
-                self._pool.shutdown(wait=False, cancel_futures=True)
+                try:
+                    self._web.shutdown()
+                finally:
+                    if self._gateway:
+                        gateway, self._gateway = self._gateway, None
+                        threading.Thread(target=gateway.close, daemon=True).start()
+                    self._pool.shutdown(wait=False, cancel_futures=True)

@@ -173,7 +173,9 @@ def main(arguments):
                 assert dock._capture_button.parentWidget() is toolbar
                 assert dock._import_button.parentWidget() is toolbar
                 assert not dock._reference_mode.isVisible()
-                dock._reference_actions[1].trigger()
+                dock._show_settings("canvas")
+                dock._settings_dialog.reference_cards[1].click()
+                dock._settings_dialog.hide()
                 assert dock._reference_mode.currentData() == "original"
                 assert dock._settings.value("referenceMode") == "original"
                 dock._source.setCurrentIndex(dock._source.findData("canvas"))
@@ -193,7 +195,7 @@ def main(arguments):
                     assert capture.call_args.kwargs["display"] is True
                     receive.assert_called_once_with()
                 report["workbench_transfer_actions_preserved"] = True
-                dock._reference_actions[0].trigger()
+                dock._settings_dialog.reference_cards[0].click()
                 report["workbench_quality_setting_preserved"] = True
                 dock._status("Mori 工作台")
                 QApplication.processEvents()
@@ -223,7 +225,7 @@ def main(arguments):
                     QApplication.processEvents()
                 assert not dock._toolbar_inline
                 assert toolbar.parentWidget() is dock._pages.currentWidget()
-                for control in (dock._source, dock._capture_button, dock._import_button, dock._workbench_options):
+                for control in (dock._source, dock._capture_button, dock._import_button, dock._settings_entry):
                     assert control.isVisible()
                     assert control.visibleRegion().boundingRect().contains(control.rect())
                 report["workbench_narrow_controls_not_clipped"] = True

@@ -1,4 +1,4 @@
-﻿param(
+param(
     [string]$HostExecutable = (Join-Path $PSScriptRoot '..\mori_krita\webview-host\MoriWebHost.exe'),
     [string]$OutputDirectory = (Join-Path $PSScriptRoot '..\qa\host-owner-exit')
 )

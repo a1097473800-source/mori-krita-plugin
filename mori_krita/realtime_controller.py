@@ -226,6 +226,8 @@ class RealtimeController(QObject):
         width = self._document.width() if self._document else 1
         height = self._document.height() if self._document else 1
         settings["aspect"] = selection_aspect(width, height, model.get("aspects"))
+        preferences = getattr(self.docker, "_settings", None)
+        settings["reference_mode"] = preferences.value("referenceMode", "original", type=str) if preferences else "original"
         return settings
 
     def _quote(self):
@@ -236,6 +238,7 @@ class RealtimeController(QObject):
             return
         settings = self._settings()
         settings.pop("variation", None)
+        settings.pop("reference_mode", None)
         identity, version = self._session(gateway), self._quote_version
 
         def quote():

@@ -134,6 +134,15 @@ class WebUpdateManager:
         self.bundled_root = Path(bundled_root).resolve()
         self.bridge_version = bridge_version
         _version(bridge_version)
+        self.minimum_canvas_sync = 0
+        try:
+            raw = (self.bundled_root / "ui-release.json").read_bytes()
+            if len(raw) <= MAX_MANIFEST_BYTES:
+                meta = _metadata(_json(raw), bridge_version)
+                self.minimum_canvas_sync = int(_version(meta["bridgeMinVersion"]) >= (0, 4, 8))
+                self.minimum_canvas_sync = max(self.minimum_canvas_sync, self._canvas_sync(_json(raw)))
+        except (OSError, WebUpdateError):
+            pass
         self._opener = urllib.request.build_opener(_NoRedirect(), urllib.request.HTTPSHandler(context=ssl.create_default_context()))
         with _locks_guard:
             self._lock = _locks.setdefault(str(self.cache_root), threading.Lock())
@@ -206,6 +215,22 @@ class WebUpdateManager:
             pass
         return WebRelease(self.bundled_root, version, "bundled")
 
+    def _release_metadata(self, value):
+        metadata = _metadata(value, self.bridge_version)
+        # Minimum native version expresses API compatibility, not UI freshness.
+        # Track the cloud-sync contract separately so a newer compatible UI
+        # cannot silently remove the synchronization and conflict handling.
+        if self._canvas_sync(value) < self.minimum_canvas_sync:
+            raise WebUpdateError("服务器尚未发布匹配的云端同步网页，已保留当前画布；请在更新页查看插件新版本。")
+        return metadata
+
+    @staticmethod
+    def _canvas_sync(value):
+        contract = value.get("canvasSyncVersion", 0)
+        if type(contract) is not int or contract < 0:
+            raise WebUpdateError("网页同步兼容信息无效。")
+        return contract
+
     def _cached(self):
         try:
             pointer_path = self.cache_root / "current.json"
@@ -217,7 +242,7 @@ class WebUpdateManager:
             if len(raw) > MAX_MANIFEST_BYTES:
                 return None
             pointer = _json(raw)
-            meta = _metadata(pointer, self.bridge_version)
+            meta = self._release_metadata(pointer)
             digest = pointer.get("bundleSha256")
             inventory = pointer.get("files")
             if (not isinstance(digest, str) or not _SHA256.fullmatch(digest)
@@ -245,7 +270,9 @@ class WebUpdateManager:
                 found.add(name.casefold())
             if len(found) != len(inventory):
                 return None
-            if _metadata(_json((root / "ui-release.json").read_bytes()), self.bridge_version) != meta:
+            inner = _json((root / "ui-release.json").read_bytes())
+            if (_metadata(inner, self.bridge_version) != meta
+                    or self._canvas_sync(inner) != self._canvas_sync(pointer)):
                 return None
             return WebRelease(root, meta["uiVersion"], "cache")
         except (OSError, WebUpdateError, TypeError, AttributeError):
@@ -255,7 +282,7 @@ class WebUpdateManager:
         return self._cached() or self._bundled()
 
     def _stage(self, data, manifest, cancel_event, deadline):
-        metadata = _metadata(manifest, self.bridge_version)
+        metadata = self._release_metadata(manifest)
         if _linked_path(self.cache_root, self.cache_root.parent):
             raise WebUpdateError("网页更新缓存路径无效，已使用内置版本。")
         self.cache_root.mkdir(parents=True, exist_ok=True)
@@ -297,7 +324,9 @@ class WebUpdateManager:
             if "index.html" not in inventory or "ui-release.json" not in inventory:
                 raise WebUpdateError("网页更新缺少入口或版本文件。")
             release_metadata = (stage / "ui-release.json").read_bytes()
-            if len(release_metadata) > MAX_MANIFEST_BYTES or _metadata(_json(release_metadata), self.bridge_version) != metadata:
+            if (len(release_metadata) > MAX_MANIFEST_BYTES
+                    or _metadata(_json(release_metadata), self.bridge_version) != metadata
+                    or self._canvas_sync(_json(release_metadata)) != self._canvas_sync(manifest)):
                 raise WebUpdateError("网页更新包与发布版本不一致。")
             self._cancelled(cancel_event, deadline)
             digest = manifest["bundle"]["sha256"].lower()
@@ -314,7 +343,7 @@ class WebUpdateManager:
             else:
                 os.replace(str(stage), str(target))
             self._cancelled(cancel_event, deadline)
-            pointer = {**metadata, "bundleSha256": digest, "files": inventory}
+            pointer = {**metadata, "canvasSyncVersion": self._canvas_sync(manifest), "bundleSha256": digest, "files": inventory}
             pointer_data = json.dumps(pointer, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
             if len(pointer_data) > MAX_MANIFEST_BYTES:
                 raise WebUpdateError("网页更新资源清单过大。")
@@ -335,12 +364,12 @@ class WebUpdateManager:
         """Fetch once in a worker; failed checks keep the last verified release."""
         with self._lock:
             previous = self.selected()
-            deadline = time.monotonic() + 12
+            deadline = time.monotonic() + 45
             try:
                 self._cancelled(cancel_event, deadline)
                 manifest = _json(self._download(self._url("/krita-ui/manifest.json"), MAX_MANIFEST_BYTES,
                                                cancel_event, deadline))
-                metadata = _metadata(manifest, self.bridge_version)
+                metadata = self._release_metadata(manifest)
                 bundle = manifest.get("bundle")
                 if (not isinstance(bundle, dict) or not isinstance(bundle.get("sha256"), str)
                         or not _SHA256.fullmatch(bundle["sha256"]) or type(bundle.get("size")) is not int

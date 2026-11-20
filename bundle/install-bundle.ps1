@@ -374,7 +374,9 @@ try {
 
         filesVerified=$manifest.files.Count; webView=$runtime; testOnly=$test
 
-        selectionOverlayRemoved=$true; completedAt=(Get-Date).ToString('o')
+        selectionOverlayRemoved=[bool]$manifest.selectionOverlayRemoved
+        selectionAssistantEnabled=[bool]$manifest.selectionAssistantEnabled
+        completedAt=(Get-Date).ToString('o')
 
     }
 

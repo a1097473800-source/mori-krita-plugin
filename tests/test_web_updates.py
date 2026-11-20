@@ -106,6 +106,46 @@ class WebUpdateTests(unittest.TestCase):
         self.assertEqual(again.release, result.release)
         self.assertEqual(len(self.requests), before + 1)
 
+    def cloud_manager(self):
+        meta = {**metadata("20261117-bundled", "0.4.8"), "canvasSyncVersion": 1}
+        (self.bundled / "ui-release.json").write_text(json.dumps(meta))
+        return updates.WebUpdateManager(self.url, self.bundled, self.root / "cloud-cache", "0.4.9")
+
+    def test_cloud_contract_accepts_new_ui_with_lower_native_minimum(self):
+        manager = self.cloud_manager()
+        self.publish(meta={**metadata("20261120-cloud", "0.4.4"), "canvasSyncVersion": 1})
+        result = manager.check()
+        self.assertTrue(result.updated)
+        self.assertEqual(manager.selected(), result.release)
+
+    def test_old_ui_cannot_remove_cloud_synchronization(self):
+        manager = self.cloud_manager()
+        self.publish(meta=metadata("20261120-without-cloud", "0.4.8"))
+        result = manager.check()
+        self.assertFalse(result.updated)
+        self.assertEqual(result.release.root, self.bundled)
+        self.assertIn("云端同步", result.message)
+        self.assertEqual(len(self.requests), 1)
+
+    def test_claimed_cloud_contract_must_match_bundle(self):
+        manager = self.cloud_manager()
+        meta = {**metadata("20261120-cloud", "0.4.8"), "canvasSyncVersion": 1}
+        self.publish(payload=bundle(metadata("20261120-cloud", "0.4.8")), meta=meta)
+        self.assertFalse(manager.check().updated)
+        self.assertFalse((manager.cache_root / "current.json").exists())
+
+    def test_cloud_contract_boolean_and_negative_are_invalid(self):
+        manager = self.cloud_manager()
+        for value in (True, -1, "1"):
+            self.publish(meta={**metadata("20261120-cloud", "0.4.8"), "canvasSyncVersion": value})
+            self.assertFalse(manager.check().updated)
+
+    def test_new_native_requirement_still_blocks_incompatible_ui(self):
+        manager = self.cloud_manager()
+        self.publish(meta={**metadata("20261120-future", "0.5.0"), "canvasSyncVersion": 1})
+        self.assertFalse(manager.check().updated)
+        self.assertEqual(len(self.requests), 1)
+
     def test_requests_have_no_account_or_cookie_headers(self):
         self.publish()
         self.manager.check()

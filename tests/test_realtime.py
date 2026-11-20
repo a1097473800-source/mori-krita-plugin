@@ -127,6 +127,25 @@ class RealtimeProtocolTests(unittest.TestCase):
         self.assertTrue(calls[0][3]["clientRequestId"])
         self.assertEqual(self.gateway.job_targets, {})  # Workbench cannot auto-import it twice.
 
+    def test_reference_encoding_follows_selected_mode_and_stays_local(self):
+        for mode in ("original", "fast"):
+            with self.subTest(mode=mode):
+                prepare = mock.Mock(return_value=SimpleNamespace(image_bytes=PNG, mime="image/png"))
+                result = task.run_realtime_task(self.gateway, [self.snapshot],
+                    dict(SETTINGS, reference_mode=mode), expected_identity=self.identity,
+                    prepare=prepare, poll_interval=.01)
+                self.assertEqual(result["status"], "completed", result)
+                prepare.assert_called_once_with(self.snapshot, mode=mode)
+                self.assertNotIn("reference_mode", self.requests("/api/generate")[-1][3])
+                self.assertNotIn("reference_mode", self.requests("/api/credits/quote")[-1][3])
+
+    def test_default_reference_encoding_preserves_original_resolution(self):
+        prepare = mock.Mock(return_value=SimpleNamespace(image_bytes=PNG, mime="image/png"))
+        result = task.run_realtime_task(self.gateway, [self.snapshot], SETTINGS,
+            expected_identity=self.identity, prepare=prepare, poll_interval=.01)
+        self.assertEqual(result["status"], "completed", result)
+        prepare.assert_called_once_with(self.snapshot, mode="original")
+
     def test_status_follows_actual_queue_generation_and_download(self):
         self.server.slow = True
         stages = []

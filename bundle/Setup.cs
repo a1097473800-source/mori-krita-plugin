@@ -11,7 +11,7 @@ using System.Windows.Forms;
 
 [assembly: AssemblyTitle("Mori for Krita 安装程序")]
 [assembly: AssemblyCompany("Mori")]
-[assembly: AssemblyVersion("0.4.7.0")]
+[assembly: AssemblyVersion("__MORI_VERSION__.0")]
 
 internal static class Setup
 {
@@ -185,7 +185,7 @@ internal sealed class SetupForm : Form
 
     internal SetupForm()
     {
-        Text = "Krita";
+        Text = "Mori / Krita 安装程序";
         ClientSize = new Size(520, 316);
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;
@@ -194,7 +194,7 @@ internal sealed class SetupForm : Form
         ForeColor = Color.FromArgb(239, 239, 242);
         Font = new Font("Microsoft YaHei UI", 10);
         var title = new Label { Text = "MORI / Krita", Font = new Font("Segoe UI", 23, FontStyle.Bold), AutoSize = true, Location = new Point(30, 25) };
-        var detail = new Label { Text = "Krita 5.3.4.1\nMori 0.4.7  ·  AI Diffusion 1.47.0  ·  Vision Tools 2.2.0", AutoSize = true, Location = new Point(33, 88), ForeColor = Color.FromArgb(180, 180, 188) };
+        var detail = new Label { Text = "Krita 5.3.4.1\nMori __MORI_VERSION__  ·  AI Diffusion __AI_VERSION__  ·  Vision Tools 2.2.0", AutoSize = true, Location = new Point(33, 88), ForeColor = Color.FromArgb(180, 180, 188) };
         status.SetBounds(33, 157, 452, 45);
         status.Text = "安装后即可从桌面打开 Krita";
         progress.SetBounds(33, 210, 452, 5);
@@ -202,8 +202,8 @@ internal sealed class SetupForm : Form
         action.Text = "安装";
         action.FlatStyle = FlatStyle.Flat;
         action.FlatAppearance.BorderSize = 0;
-        action.BackColor = Color.FromArgb(104, 69, 255);
-        action.ForeColor = Color.White;
+        action.BackColor = Color.FromArgb(189, 172, 239);
+        action.ForeColor = Color.FromArgb(37, 32, 47);
         action.Click += ClickInstall;
         Controls.AddRange(new Control[] { title, detail, status, progress, action });
         FormClosing += delegate(object sender, FormClosingEventArgs e) { if (busy) e.Cancel = true; };

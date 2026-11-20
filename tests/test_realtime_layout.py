@@ -78,13 +78,12 @@ class RealtimeLayoutTests(unittest.TestCase):
         self.pump()
         self.assertEqual(len(self.panel.reference_rows), 1)
         before = self.panel.preview.height()
+        requests = []
+        self.panel.settings_requested.connect(lambda: requests.append(True))
         self.panel.show_options()
         self.pump()
-        self.assertTrue(self.panel.options_box.isVisible())
+        self.assertEqual(requests, [True])
         self.assertEqual(self.panel.preview.height(), before)
-        self.panel.options_box.hide()
-        self.pump()
-        self.assertGreaterEqual(self.panel.preview.height(), before - 3)
         self.assertEqual(self.panel.source_ids(), ("a", ["b"]))
         self.assertFalse(self.panel.testAttribute(Qt.WA_NativeWindow))
 

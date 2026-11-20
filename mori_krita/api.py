@@ -344,14 +344,15 @@ class MoriClient:
     @property
     def session_version(self):
         """Current master version, or the immutable version frozen in a fork."""
-        with self._lock:
-            return self._snapshot_generation if self._snapshot_owner is not None else self._session_generation
+        # This read is used by GUI timers. The request lock can be held during
+        # a slow network read; reading an immutable integer must never wait on
+        # it. Authorization and snapshot validation still take their locks.
+        return self._snapshot_generation if self._snapshot_owner is not None else self._session_generation
 
     @property
     def session_restored(self):
         """A saved cookie awaits validation by the existing /auth/session route."""
-        with self._lock:
-            return self._session_restored
+        return self._session_restored
 
     def assert_session_current(self):
         with self._lock:

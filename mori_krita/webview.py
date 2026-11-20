@@ -99,14 +99,13 @@ class WebCanvas(QWidget):
             self._pending_url = url
             self._stop(clear_pending=False)
             return True
-        self._active = True
         self._stopping = False
         self._was_ready = False
         self._buffer = b""
         self._profile = tempfile.mkdtemp(prefix="mori-krita-webview-")
         self._host.setAttribute(Qt.WA_NativeWindow)
-        self._host_parent.show()
-        self._host.show()
+        self._host_parent.setVisible(self._active)
+        self._host.setVisible(self._active)
         self._status.setText("正在启动 Mori 画布…")
         self._status.show()
         self._config = {"url": url, "parent": int(self._host.winId()), "profile": self._profile}
@@ -132,6 +131,7 @@ class WebCanvas(QWidget):
         that child HWND visible over the next plugin page on Windows.  Mirror
         the page state in both Qt and the host process.
         """
+        changed = self._active != bool(active)
         self._active = bool(active)
         if self._closed:
             return
@@ -139,7 +139,7 @@ class WebCanvas(QWidget):
             self._host_parent.setVisible(self._active)
         if is_alive(self._host):
             self._host.setVisible(self._active)
-        if is_alive(self._process) and self._process.state() == QProcess.Running:
+        if changed and is_alive(self._process) and self._process.state() == QProcess.Running:
             self._send({"op": "visibility", "visible": self._active})
 
     def _started(self):

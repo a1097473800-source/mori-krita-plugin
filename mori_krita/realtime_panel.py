@@ -167,7 +167,26 @@ def ui_icon(name, color="#a4a1ae"):
         painter.setPen(Qt.NoPen)
         for x in (3.5, 8, 12.5):
             painter.drawEllipse(QPointF(x, 8), .9, .9)
-    elif name == "settings":
+    elif name == "gear":
+        path = QPainterPath()
+        import math
+        for index in range(64):
+            angle = index * math.pi / 32 - math.pi / 2
+            radius = 6.6 if index % 8 in (2, 3, 4, 5) else 5.1
+            point = QPointF(8 + radius * math.cos(angle), 8 + radius * math.sin(angle))
+            if index == 0:
+                path.moveTo(point)
+            else:
+                path.lineTo(point)
+        path.closeSubpath()
+        painter.drawPath(path)
+        painter.drawEllipse(QPointF(8, 8), 2.1, 2.1)
+    elif name == "layers":
+        painter.drawPolygon(QPolygonF([QPointF(8, 2), QPointF(14, 5.5), QPointF(8, 9), QPointF(2, 5.5)]))
+        for offset in (3, 6):
+            line(2, 5.5 + offset, 8, 9 + offset)
+            line(8, 9 + offset, 14, 5.5 + offset)
+    elif name in ("settings", "sliders"):
         for y, x in ((4, 6), (8, 11), (12, 5)):
             line(2.5, y, x - 1.5, y); line(x + 1.5, y, 13.5, y)
             painter.drawEllipse(QPointF(x, y), 1.5, 1.5)
@@ -353,44 +372,6 @@ class _VariationSlider(QSlider):
             self.blockSignals(blocked)
 
 
-class _PopupFrame(QFrame):
-    """Transient controls never take height away from the image preview."""
-    def __init__(self, anchor):
-        super().__init__(anchor, Qt.Popup | Qt.FramelessWindowHint)
-        self.anchor = anchor
-        self.setObjectName("MoriPopover")
-        self.setAttribute(Qt.WA_DontCreateNativeAncestors, True)
-        self.setAttribute(Qt.WA_NoMouseReplay, True)
-        set_dark_surface(self, "#2a2a2f")
-        self.setStyleSheet(MORI_STYLE)
-
-    def open(self):
-        self.adjustSize()
-        available = QApplication.desktop().availableGeometry(self.anchor)
-        position = self.anchor.mapToGlobal(QPoint(self.anchor.width() - self.width(), self.anchor.height() + 5))
-        x = max(available.left(), min(position.x(), available.right() - self.width() + 1))
-        y = position.y()
-        if y + self.height() > available.bottom():
-            y = self.anchor.mapToGlobal(QPoint(0, -self.height() - 5)).y()
-        self.move(x, max(available.top(), y))
-        self.show()
-        self.raise_()
-
-    def hideEvent(self, event):
-        self.anchor.blockSignals(True)
-        self.anchor.setChecked(False)
-        self.anchor.blockSignals(False)
-        super().hideEvent(event)
-
-    def keyPressEvent(self, event):
-        if event.key() == Qt.Key_Escape:
-            self.hide()
-            self.anchor.setFocus()
-            event.accept()
-        else:
-            super().keyPressEvent(event)
-
-
 class ImagePreview(QWidget):
     """Paint the original image at the current viewport size."""
     open_requested = pyqtSignal()
@@ -487,6 +468,8 @@ class ImagePreview(QWidget):
 
 
 class RealtimePanel(QWidget):
+    settings_requested = pyqtSignal()
+    options_changed = pyqtSignal()
     parameters_changed = pyqtSignal()
     sources_changed = pyqtSignal()
     auto_changed = pyqtSignal(bool)
@@ -502,6 +485,7 @@ class RealtimePanel(QWidget):
         self._image = self._source_image = None
         self._busy = self._available = False
         self._models = []
+        self._preferred_quality = "low"
         self._large_dialog = None
         self._layer_choices = []
         self.reference_rows = []
@@ -634,44 +618,24 @@ class RealtimePanel(QWidget):
         self.references_box.hide()
         layout.addWidget(self.references_box)
 
-        # Less-used controls remain reachable from the titlebar settings menu.
-        self.options_toggle = QToolButton(self)
-        self.options_toggle.setCheckable(True)
-        self.options_toggle.hide()
-        self.options_box = _PopupFrame(self.generate)
-        self.options_box.setFixedWidth(290)
-        grid = QGridLayout(self.options_box)
-        grid.setContentsMargins(12, 12, 12, 12)
-        grid.setHorizontalSpacing(9)
-        grid.setVerticalSpacing(9)
-        self.subject = _CompactComboBox()
+        # Controllers retain stable widgets even when settings are closed.
+        self._options_state = QWidget(self)
+        self._options_state.hide()
+        self.subject = _CompactComboBox(self._options_state)
         self.subject.setAccessibleName("画面来源")
-        self.subject.setMinimumWidth(0)
-        self.subject.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Fixed)
         self.subject.addItem("当前画布", CANVAS_SOURCE)
         self.subject.currentIndexChanged.connect(self._sources_updated)
-        self.quality = _CompactComboBox()
-        for label, value in (("快速", "low"), ("标准", "medium"), ("精细", "high")):
-            self.quality.addItem(label, value)
-        self.delay = _CompactComboBox()
-        for label, value in (("停笔 1 秒", 1.0), ("停笔 2 秒", 2.0), ("停笔 4 秒", 4.0)):
-            self.delay.addItem(label, value)
+        self.quality = _CompactComboBox(self._options_state)
+        for caption, value in (("快速", "low"), ("标准", "medium"), ("精细", "high")):
+            self.quality.addItem(caption, value)
+        self.quality.currentIndexChanged.connect(self._quality_changed)
+        self.delay = _CompactComboBox(self._options_state)
+        for caption, value in (("停笔 1 秒", 1.0), ("停笔 2 秒", 2.0), ("停笔 4 秒", 4.0)):
+            self.delay.addItem(caption, value)
         self.delay.setCurrentIndex(1)
-        grid.addWidget(_label("画面来源", "muted"), 0, 0)
-        grid.addWidget(self.subject, 0, 1)
-        grid.addWidget(_label("生成质量", "muted"), 1, 0)
-        grid.addWidget(self.quality, 1, 1)
-        grid.addWidget(_label("停笔后更新", "muted"), 2, 0)
-        grid.addWidget(self.delay, 2, 1)
-        self.writeback = QCheckBox("新结果自动放入画布")
-        self.writeback.setToolTip("默认先预览，满意后手动放入；结果写入独立图层。")
-        grid.addWidget(self.writeback, 3, 0, 1, 2)
+        self.writeback = QCheckBox("新结果自动放入画布", self._options_state)
         self.document = _label("尚未打开画布", "muted")
-        self.document.setWordWrap(True)
-        grid.addWidget(self.document, 4, 0, 1, 2)
-        grid.setColumnStretch(1, 1)
-        self.options_box.hide()
-        self.options_toggle.toggled.connect(lambda checked: self.show_options() if checked else self.options_box.hide())
+        self.document.setParent(self._options_state)
 
         self.result_surface = QWidget(self)
         self.result_surface.setObjectName("MoriPreviewSurface")
@@ -770,8 +734,11 @@ class RealtimePanel(QWidget):
         self.controls_scroll.setFixedHeight(min(height, limit))
 
     def show_options(self, anchor=None):
-        self.options_box.anchor = anchor or self.generate
-        self.options_box.open()
+        self.settings_requested.emit()
+
+    def _quality_changed(self, *unused):
+        if self.quality.isEnabled() and self.quality.currentData():
+            self._preferred_quality = self.quality.currentData()
 
     def _variation_changed(self, value):
         self.variation_value.setText("%d%%" % self.variation.value())
@@ -864,7 +831,7 @@ class RealtimePanel(QWidget):
         identifier = self.model.currentData() or ""
         model = next((model for model in self._models if model.get("id") == identifier), {})
         values = model.get("qualities", ["low", "medium", "high"] if identifier.startswith("gpt-image-") else [])
-        current = self.quality.currentData()
+        current = self._preferred_quality
         self.quality.blockSignals(True)
         self.quality.clear()
         labels = {"low": "快速", "medium": "标准", "high": "精细", "xhigh": "超精细", "max": "最高"}
@@ -874,6 +841,7 @@ class RealtimePanel(QWidget):
         self.quality.setCurrentIndex(max(0, index))
         self.quality.setEnabled(bool(values))
         self.quality.blockSignals(False)
+        self.options_changed.emit()
 
     def set_models(self, models, preferred=None):
         current = preferred or self.model.currentData()
@@ -920,6 +888,7 @@ class RealtimePanel(QWidget):
             for row in self.reference_rows:
                 self._fill_reference_layers(row["layer"], row["layer"].currentData())
         self._fit_controls()
+        self.options_changed.emit()
 
     def source_ids(self):
         return (self.subject.currentData() or CANVAS_SOURCE,
