@@ -9,44 +9,44 @@ from PyQt5.QtWidgets import (QCheckBox, QFrame, QHBoxLayout, QLabel,
 
 STYLE = """
 QDialog { background:transparent; }
-QFrame#UpdateWindow { background:#1d1d21; border:1px solid #38383f; border-radius:16px; }
-QLabel { background:transparent; color:#eeeef2; font-family:'Microsoft YaHei UI'; font-size:13px; border:0; }
-QLabel#UpdateBrand { color:#f2f0f6; font-size:12px; font-weight:600; }
-QLabel#UpdateEyebrow { color:#86848f; font-size:12px; }
-QLabel#UpdateHeading { font-size:19px; font-weight:600; color:#f5f3f8; }
-QLabel#UpdateMuted { color:#96949f; font-size:12px; }
-QLabel#UpdateVersionCaption { color:#9c99a7; font-size:12px; }
+QFrame#UpdateWindow { background:#1d1d1d; border:1px solid #393939; border-radius:16px; }
+QLabel { background:transparent; color:#eeeeee; font-family:'Microsoft YaHei UI'; font-size:13px; border:0; }
+QLabel#UpdateBrand { color:#f1f1f1; font-size:12px; font-weight:600; }
+QLabel#UpdateEyebrow { color:#858585; font-size:12px; }
+QLabel#UpdateHeading { font-size:19px; font-weight:600; color:#f4f4f4; }
+QLabel#UpdateMuted { color:#959595; font-size:12px; }
+QLabel#UpdateVersionCaption { color:#9b9b9b; font-size:12px; }
 QLabel#UpdateVersion { font-family:'Segoe UI'; font-size:23px; font-weight:600; }
-QLabel#UpdateArrow { color:#64616e; font-size:22px; }
-QLabel#UpdateSectionTitle { color:#e5e2ec; font-size:13px; font-weight:600; }
-QLabel#UpdateTag { color:#c2b0ef; font-family:'Segoe UI'; font-size:11px; }
-QLabel#UpdateWebBadge { color:#bdb0dc; background:#37303f; padding:4px 9px; border-radius:9px; font-size:11px; }
-QLabel#UpdateInstructions { color:#aaa5b6; font-size:12px; }
+QLabel#UpdateArrow { color:#636363; font-size:22px; }
+QLabel#UpdateSectionTitle { color:#e3e3e3; font-size:13px; font-weight:600; }
+QLabel#UpdateTag { color:#b8b8b8; font-family:'Segoe UI'; font-size:11px; }
+QLabel#UpdateWebBadge { color:#b6b6b6; background:#333333; padding:4px 9px; border-radius:9px; font-size:11px; }
+QLabel#UpdateInstructions { color:#a7a7a7; font-size:12px; }
 QFrame#UpdateVersionCard, QFrame#UpdateNotesCard, QFrame#UpdateWebCard {
-  background:#26262b; border:1px solid #303036; border-radius:11px;
+  background:#262626; border:1px solid #303030; border-radius:11px;
 }
-QFrame#UpdateDivider { background:#323238; border:0; }
-QTextBrowser { background:transparent; color:#bcb8c7; border:0; padding:0;
-  font-family:'Microsoft YaHei UI'; font-size:13px; selection-background-color:#655283; }
+QFrame#UpdateDivider { background:#323232; border:0; }
+QTextBrowser { background:transparent; color:#bababa; border:0; padding:0;
+  font-family:'Microsoft YaHei UI'; font-size:13px; selection-background-color:#5a5a5a; }
 QScrollBar:vertical { background:transparent; width:5px; margin:2px 0; }
-QScrollBar::handle:vertical { background:#504a5d; border-radius:2px; min-height:24px; }
+QScrollBar::handle:vertical { background:#4d4d4d; border-radius:2px; min-height:24px; }
 QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height:0; }
 QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical { background:transparent; }
-QPushButton { color:#dad5e4; background:#303036; border:1px solid #414049; border-radius:8px;
+QPushButton { color:#eeeeee; background:#303035; border:1px solid #414141; border-radius:8px;
   padding:0 18px; min-height:38px; font-family:'Microsoft YaHei UI'; font-size:13px; }
-QPushButton:hover { background:#3a3841; border-color:#55505f; }
-QPushButton[variant='primary'] { background:#bdacef; color:#25202f; border:1px solid #bdacef; font-weight:600; }
-QPushButton[variant='primary']:hover { background:#cdbdf9; border-color:#cdbdf9; }
-QPushButton:disabled { color:#81798f; background:#302c39; border-color:#3c3647; }
+QPushButton:hover { background:#393939; border-color:#525252; }
+QPushButton[variant='primary'] { background:#6845ff; color:#ffffff; border:1px solid #6845ff; font-weight:600; }
+QPushButton[variant='primary']:hover { background:#795bff; border-color:#795bff; }
+QPushButton:disabled { color:#7c7c7c; background:#2e2e2e; border-color:#393939; }
 QToolButton#UpdateClose { border:0; border-radius:7px; background:transparent; padding:0; }
-QToolButton#UpdateClose:hover { background:#343238; }
-QToolButton#UpdateRecordLink { color:#b6a5dc; background:transparent; border:0;
+QToolButton#UpdateClose:hover { background:#333333; }
+QToolButton#UpdateRecordLink { color:#adadad; background:transparent; border:0;
   font-family:'Microsoft YaHei UI'; font-size:12px; padding:0; }
-QToolButton#UpdateRecordLink:hover { color:#d7c5ff; }
+QToolButton#UpdateRecordLink:hover { color:#cdcdcd; }
 """
 
 
-def small_icon(kind, color="#aaa5b5"):
+def small_icon(kind, color="#aaaaaa"):
     pixmap = QPixmap(16, 16)
     pixmap.fill(Qt.transparent)
     painter = QPainter(pixmap)
@@ -98,9 +98,9 @@ class UpdateSymbol(QWidget):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
         painter.setPen(Qt.NoPen)
-        painter.setBrush(QColor("#302a3c"))
+        painter.setBrush(QColor("#2e2e2e"))
         painter.drawRoundedRect(QRectF(0, 0, 58, 58), 16, 16)
-        painter.setPen(QPen(QColor("#c6b3f4"), 2.3, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin))
+        painter.setPen(QPen(QColor("#d4d4d4"), 2.3, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin))
         if self.kind == "ready":
             path = QPainterPath()
             path.moveTo(18, 29)
@@ -138,12 +138,12 @@ class UpdateSwitch(QCheckBox):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
         painter.setPen(Qt.NoPen)
-        painter.setBrush(QColor("#b7a2eb" if self.isChecked() else "#4b4754"))
+        painter.setBrush(QColor("#6845ff" if self.isChecked() else "#4b4b4b"))
         painter.drawRoundedRect(QRectF(0, 1, 36, 20), 10, 10)
-        painter.setBrush(QColor("#f5f1fc"))
+        painter.setBrush(QColor("#f5f5f5"))
         painter.drawEllipse(QRectF(19 if self.isChecked() else 3, 4, 14, 14))
         if self.hasFocus():
-            painter.setPen(QPen(QColor("#dfcaff"), 1))
+            painter.setPen(QPen(QColor("#b3a3ff"), 1))
             painter.setBrush(Qt.NoBrush)
             painter.drawRoundedRect(QRectF(1, 2, 34, 18), 9, 9)
         painter.end()
@@ -237,7 +237,7 @@ class UpdatePage(QWidget):
         self.records = QToolButton()
         self.records.setObjectName("UpdateRecordLink")
         self.records.setText("查看完整更新记录")
-        self.records.setIcon(small_icon("external", "#b6a5dc"))
+        self.records.setIcon(small_icon("external", "#b8b8b8"))
         self.records.setIconSize(QSize(13, 13))
         self.records.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
         self.records.setCursor(Qt.PointingHandCursor)
@@ -327,7 +327,7 @@ class UpdatePage(QWidget):
         self.native_status.setText(message)
         self.current.setText(self.current_version)
         self.latest.setText(release.version if release else "—")
-        self.latest.setStyleSheet("color:#c9b5fa;" if available else "")
+        self.latest.setStyleSheet("color:#efefef;" if available else "")
         self.note_tag.setText("v" + release.version if release else "")
         self.notes.setPlainText(release.notes if release and release.notes else
             "打开完整更新记录，查看功能变化与历史版本。" if release else "检查后在这里查看本次更新内容。")

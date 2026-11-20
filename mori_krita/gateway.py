@@ -216,6 +216,7 @@ class MoriGateway:
         self.auto_import = True
         self.closed = False
         self.account_id = None
+        self._browser_login = None
         self.epoch = 0
         self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=2, thread_name_prefix="Mori result")
         gateway = self
@@ -324,6 +325,8 @@ class MoriGateway:
 
     def close(self):
         self.closed = True
+        if self._browser_login is not None:
+            self._browser_login.cancel()
         self.epoch += 1
         if self.thread.is_alive():
             self.httpd.shutdown()
@@ -665,7 +668,7 @@ class MoriGateway:
             result = self._local(method, path, body, key, canvas_id)
             with self.lock:
                 self._sync_identity()
-                if self.epoch != epoch and pathname.startswith(("/krita/", "/api/")):
+                if self.epoch != epoch and pathname.startswith(("/krita/", "/api/")) and not pathname.startswith('/krita/auth/browser/'):
                     raise GatewayError("账号会话已改变，已忽略旧请求的响应。", 401)
             return result
 
@@ -801,6 +804,11 @@ class MoriGateway:
                             pass
                 if pathname == "/api/auth/session" and isinstance(result, dict):
                     result.setdefault("providers", {})["google"] = False
+                    result["providers"]["browserLogin"] = True
+                if pathname == "/api/account" and isinstance(result, dict) and isinstance(result.get("profile"), dict):
+                    if result["profile"].get("canSetPassword"):
+                        result["profile"]["canSetPassword"] = False
+                        result["profile"]["passwordSetupOnWeb"] = True
                 # The server scopes commands to the cloud canvas. Filtering by
                 # local jobs would hide changes made in the website.
                 if pathname == "/api/canvases" and isinstance(result, dict):
@@ -854,9 +862,37 @@ class MoriGateway:
             check()
             self.notify("旧 Krita 画布迁移未完成，原文件已保留；重新打开工作空间可重试：" + str(error)[:250])
 
+    def browser_login(self):
+        with self.lock:
+            if self.closed:
+                raise GatewayError("插件已关闭", 410)
+            if self._browser_login is None:
+                from .browser_login import BrowserLogin
+                self._browser_login = BrowserLogin(self.client, self._sync_identity)
+            return self._browser_login
+
     def _local(self, method, path, body, account_key, canvas_id="default"):
         route = urlsplit(path)
         pathname = route.path
+        if pathname.startswith('/krita/auth/browser/'):
+            if method != 'POST':
+                raise GatewayError("请求方式无效", 405)
+            value = json.loads(body or b'{}')
+            if not isinstance(value, dict):
+                raise GatewayError("登录请求无效")
+            manager = self.browser_login()
+            action = pathname.rsplit('/', 1)[-1]
+            attempt_id = value.get('attemptId')
+            if action == 'start':
+                return self._json(manager.start(attempt_id))
+            if not isinstance(attempt_id, str) or not re.fullmatch(r'[A-Za-z0-9_-]{16,64}', attempt_id):
+                raise GatewayError("登录标识无效")
+            if action == 'status':
+                return self._json(manager.status(attempt_id))
+            if action == 'cancel':
+                manager.cancel(attempt_id)
+                return self._json({'ok': True})
+            raise GatewayError("登录接口不存在", 404)
         if pathname == "/krita/config" and method == "GET":
             # Public site address only; the paired loopback cookie is still
             # required by Handler. Never return account/session information.

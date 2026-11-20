@@ -783,7 +783,49 @@ class SelectionController(QObject):
             self._work(sign_in, logged)
         login.clicked.connect(submit_login)
         password.returnPressed.connect(submit_login)
+        browser_attempt = [None]
+        browser_timer = QTimer(dialog)
+        browser_timer.setInterval(500)
+
+        def finish_browser():
+            if not browser_attempt[0]:
+                return
+            value = gateway.browser_login().status(browser_attempt[0])
+            dialog.set_status(value.get("message", "请在浏览器中确认登录。"), error=value["status"] == "error")
+            if value["status"] == "complete":
+                browser_timer.stop()
+                gateway._sync_identity()
+                dialog.accept()
+            elif value["status"] in ("error", "cancelled"):
+                browser_timer.stop()
+                browser_attempt[0] = None
+                dialog.set_busy(False)
+                dialog.browser_submit.setText("通过浏览器登录（支持 Google）")
+
+        browser_timer.timeout.connect(finish_browser)
+
+        def browser_login():
+            manager = gateway.browser_login()
+            if browser_attempt[0]:
+                manager.cancel(browser_attempt[0])
+                finish_browser()
+                return
+            try:
+                value = manager.start()
+                browser_attempt[0] = value["attemptId"]
+                dialog.set_busy(True)
+                dialog.browser_submit.setEnabled(True)
+                dialog.browser_submit.setText("取消浏览器登录")
+                dialog.set_status(value["message"])
+                browser_timer.start()
+            except Exception as error:
+                dialog.set_status(str(error), error=True)
+
+        dialog.browser_submit.clicked.connect(browser_login)
         accepted = dialog.exec_() == QDialog.Accepted
+        browser_timer.stop()
+        if browser_attempt[0] and gateway._browser_login is not None:
+            gateway._browser_login.cancel(browser_attempt[0])
         password.clear()
         self._login_dialog = None
         dialog.deleteLater()

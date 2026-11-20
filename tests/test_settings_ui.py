@@ -32,10 +32,10 @@ class SettingsUiTests(unittest.TestCase):
         if docker_module.is_alive(self.window):
             sip.delete(self.window)
 
-    def test_gear_opens_independent_reusable_window_with_three_categories(self):
+    def test_gear_opens_independent_reusable_window_with_four_categories(self):
         self.assertTrue(self.dialog.isWindow())
         self.assertTrue(self.dialog.isVisible())
-        self.assertEqual(list(self.dialog.navigation), ["canvas", "realtime", "updates"])
+        self.assertEqual(list(self.dialog.navigation), ["canvas", "realtime", "connection", "updates"])
         self.dialog.done.click()
         self.assertFalse(self.dialog.isVisible())
         self.dock._settings_entry.click()
@@ -142,3 +142,45 @@ class SettingsUiTests(unittest.TestCase):
         self.dock._show_settings()
         self.assertIsNot(self.dock._settings_dialog, self.dialog)
         self.assertTrue(self.dock._settings_dialog.isVisible())
+
+    def test_recovery_controls_reload_and_reconnect_the_workbench_without_restarting_krita(self):
+        self.dialog.set_page("connection")
+        self.assertTrue(self.dialog.reset.isHidden())
+        self.assertTrue(self.dialog.saved.isHidden())
+        with mock.patch.object(self.dock._web, 'reload', return_value=True) as reload, \
+                mock.patch.object(self.dock, '_set_mode') as mode:
+            self.dialog.recovery_buttons['page'].click()
+        reload.assert_called_once()
+        mode.assert_called_once_with(1)
+        with mock.patch.object(self.dock, '_reconnect') as reconnect, \
+                mock.patch.object(self.dock, '_set_mode') as mode:
+            self.dialog.recovery_buttons['reconnect'].click()
+        reconnect.assert_called_once()
+        mode.assert_called_once_with(1)
+
+    def test_refresh_canvas_repaints_without_starting_live_generation(self):
+        document = mock.Mock()
+        with mock.patch.object(docker_module.Krita, 'instance') as native, \
+                mock.patch.object(self.dock._realtime, 'refresh') as refresh:
+            native.return_value.activeDocument.return_value = document
+            self.dialog.recovery_buttons['canvas'].click()
+        document.refreshProjection.assert_called_once()
+        refresh.assert_called_once()
+        self.assertFalse(self.dock._realtime_panel.live.isChecked())
+
+    def test_account_refresh_updates_native_and_workbench_views(self):
+        self.dock._web_started = True
+        with mock.patch.object(self.dock._realtime, 'refresh_account') as account, \
+                mock.patch.object(self.dock._web, 'reload') as reload:
+            self.dialog.recovery_buttons['account'].click()
+        account.assert_called_once()
+        reload.assert_called_once()
+        self.assertFalse(self.dock._realtime_panel.live.isChecked())
+
+    def test_unstarted_or_failed_workbench_can_be_opened_from_refresh(self):
+        self.dock._web_started = True
+        with mock.patch.object(self.dock._web, 'reload', return_value=False), \
+                mock.patch.object(self.dock, '_set_mode') as mode:
+            self.dialog.recovery_buttons['page'].click()
+        self.assertFalse(self.dock._web_started)
+        mode.assert_called_once_with(1)

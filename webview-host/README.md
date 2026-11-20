@@ -59,3 +59,21 @@ References:
 - [Microsoft WebView2 WinForms setup](https://learn.microsoft.com/en-us/microsoft-edge/webview2/get-started/winforms)
 - [WebView2 threading model](https://learn.microsoft.com/en-us/microsoft-edge/webview2/concepts/threading-model)
 - [NuGet package](https://www.nuget.org/packages/Microsoft.Web.WebView2/1.0.4314.35)
+
+
+## Hidden startup and page presentation (0.4.13)
+
+The native window starts as a hidden child with the Qt parent configured from creation. WinForms may park unmanaged children during handle creation; bounds synchronization restores the foreign parent while hidden. The requested visibility and usable-page readiness must both be true before presentation. Native resize calls only run when the dimensions change.
+
+Qt displays a native loading screen using the approved SVG cubic outlines. A path stroke progressively draws each contour, then the filled wordmark appears; no loading caption is shown. Hidden/loading-failure states stop the animation timer.
+
+Navigation emits `loading`. After successful navigation, a same-origin document script waits for a populated root, the end of account/canvas loading placeholders and loaded fonts. A per-navigation nonce binds its ready message to the current document. This works for bundled and compatible cached pages; readiness does not depend on a fixed sleep or a new website deployment. `visible:false` in initial configuration keeps the process hidden until the Qt wrapper handles `ready` and requests visibility.
+
+`test-presentation.ps1` uses a delayed local React-like root to test hidden startup, native parent identity, page readiness and hide/show cycles. `test-lifecycle.ps1` continues to check initialization, navigation, native parent loss and shutdown. No model calls or real accounts are used.
+
+
+## Pipe commands and recovery (0.4.14)
+
+Qt QProcess supplies an overlapped standard-input pipe. Pending synchronous ConsoleStream reads stalled short visibility commands in the combined Qt/WebView2 runtime. PipeCommandReader checks available bytes before reading, bounds each UTF-8 JSON line, and keeps configuration, visibility, reload, focus and close on the same private pipe. The native loading surface remains caption-free.
+
+`run_webview_integration_qa` launches the real bundled executable from QProcess in an isolated Qt dock with a loopback fixture. It verifies the actual native child becomes visible after readiness, mode hiding/return, reload, process restart and graceful shutdown. This covers the process boundary omitted by the in-process host presentation tests.

@@ -9,10 +9,11 @@ import tempfile
 from urllib.parse import urlsplit
 
 from PyQt5.QtCore import QEvent, QProcess, QTimer, Qt, pyqtSignal
-from PyQt5.QtWidgets import QApplication, QLabel, QVBoxLayout, QWidget
+from PyQt5.QtWidgets import QApplication, QStackedLayout, QVBoxLayout, QWidget
 
 from .qt_lifetime import is_alive
 from .realtime_panel import set_dark_surface
+from .loading_screen import MoriLoadingScreen
 
 
 class WebCanvas(QWidget):
@@ -21,11 +22,12 @@ class WebCanvas(QWidget):
     ready = pyqtSignal()
     error = pyqtSignal(str)
     stopped = pyqtSignal()
+    restart_requested = pyqtSignal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
         set_dark_surface(self)
-        self.setStyleSheet("background:#1c1c20; border:0;")
+        self.setStyleSheet("background:#222222; border:0;")
         self._closed = False
         self._process = None
         self._profile = None
@@ -38,21 +40,21 @@ class WebCanvas(QWidget):
         # child, so keep its intended page visibility explicitly.
         self._active = False
         self._pending_url = None
-        self._status = QLabel("打开画布后，将在此显示 Mori 节点工作区。", self)
-        self._status.setWordWrap(True)
-        self._status.setAlignment(Qt.AlignCenter)
-        self._status.setMargin(16)
+        self._last_url = None
+        self._loading = MoriLoadingScreen(self)
+        self._loading.retry_requested.connect(self._retry)
+        self._status = self._loading.message
         # Give the HWND a parent with no widget siblings: Qt also makes native
         # siblings when creating a child HWND, which would otherwise turn the
         # status label (and then the whole dock) into native windows.
         self._host_parent = QWidget(self)
-        set_dark_surface(self._host_parent, "#101112")
+        set_dark_surface(self._host_parent, "#222222")
         host_layout = QVBoxLayout(self._host_parent)
         host_layout.setContentsMargins(0, 0, 0, 0)
         host_layout.setSpacing(0)
         self._host = QWidget(self._host_parent)
-        set_dark_surface(self._host, "#101112")
-        self._host.setStyleSheet("background:#101112; border:0; margin:0; padding:0;")
+        set_dark_surface(self._host, "#222222")
+        self._host.setStyleSheet("background:#222222; border:0; margin:0; padding:0;")
         # Do not promote the hidden stacked page, dock and Krita's other docks
         # to HWNDs. Native ancestors leave stale/unpainted strips after layout
         # restore on Windows. Create only this host, when the workbench opens.
@@ -63,11 +65,13 @@ class WebCanvas(QWidget):
         self._host.hide()
         host_layout.addWidget(self._host)
         self._host_parent.hide()
-        layout = QVBoxLayout(self)
+        layout = QStackedLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
-        layout.addWidget(self._status)
-        layout.addWidget(self._host_parent, 1)
+        layout.addWidget(self._loading)
+        layout.addWidget(self._host_parent)
+        self._surface_stack = layout
+        layout.setCurrentWidget(self._loading)
         self._timeout = QTimer(self)
         self._timeout.setSingleShot(True)
         self._timeout.timeout.connect(self._load_timeout)
@@ -96,19 +100,19 @@ class WebCanvas(QWidget):
             self._fail("缺少 Mori 画布引擎，请重新安装完整的 Windows 插件包。")
             return False
         if is_alive(self._process) and self._process.state() != QProcess.NotRunning:
+            self.begin_loading("正在重新连接 Mori 工作台…")
             self._pending_url = url
             self._stop(clear_pending=False)
             return True
         self._stopping = False
         self._was_ready = False
         self._buffer = b""
+        self._last_url = url
         self._profile = tempfile.mkdtemp(prefix="mori-krita-webview-")
+        self.begin_loading("正在打开 Mori 工作台…")
         self._host.setAttribute(Qt.WA_NativeWindow)
-        self._host_parent.setVisible(self._active)
-        self._host.setVisible(self._active)
-        self._status.setText("正在启动 Mori 画布…")
-        self._status.show()
-        self._config = {"url": url, "parent": int(self._host.winId()), "profile": self._profile}
+        self._config = {"url": url, "parent": int(self._host.winId()), "profile": self._profile,
+                        "visible": False}
         process = QProcess(self)
         self._process = process
         process.setProgram(str(executable))
@@ -135,12 +139,45 @@ class WebCanvas(QWidget):
         self._active = bool(active)
         if self._closed:
             return
+        visible = self._active and self._was_ready
         if is_alive(self._host_parent):
-            self._host_parent.setVisible(self._active)
+            self._host_parent.setVisible(visible)
         if is_alive(self._host):
-            self._host.setVisible(self._active)
+            self._host.setVisible(visible)
+        if is_alive(self._loading):
+            self._loading.logo.set_running(self._active and not self._was_ready and self._loading.retry.isHidden())
         if changed and is_alive(self._process) and self._process.state() == QProcess.Running:
-            self._send({"op": "visibility", "visible": self._active})
+            self._send({"op": "visibility", "visible": visible})
+
+    def begin_loading(self, message="正在打开 Mori 工作台…"):
+        if self._closed or not is_alive(self):
+            return
+        self._was_ready = False
+        self._surface_stack.setCurrentWidget(self._loading)
+        self._host_parent.hide()
+        self._host.hide()
+        self._loading.set_loading(message)
+        self._loading.logo.set_running(self._active)
+        self._send({"op": "visibility", "visible": False})
+
+    def _retry(self):
+        if self._closed:
+            return
+        if self._last_url:
+            self.start(self._last_url)
+        else:
+            self.restart_requested.emit()
+
+    def reload(self):
+        """Reload the same local page without replacing its browser session."""
+        if self._closed or self._stopping or not is_alive(self._process):
+            return False
+        if self._process.state() != QProcess.Running:
+            return False
+        self.begin_loading()
+        self._timeout.start(30000)
+        self._send({"op": "reload"})
+        return True
 
     def _started(self):
         if self._closed:
@@ -149,7 +186,7 @@ class WebCanvas(QWidget):
         self._send(self._config)
         self._config = None
         # The page can be switched while the host process is starting.
-        self._send({"op": "visibility", "visible": self._active})
+        self._send({"op": "visibility", "visible": self._active and self._was_ready})
 
     def _send(self, data):
         if self._closed and (not isinstance(data, dict) or data.get("op") != "close"):
@@ -176,8 +213,15 @@ class WebCanvas(QWidget):
             if data.get("type") == "ready":
                 self._timeout.stop()
                 self._was_ready = True
-                self._status.hide()
+                self._loading.pause()
+                self._surface_stack.setCurrentWidget(self._host_parent)
+                self._host_parent.setVisible(self._active)
+                self._host.setVisible(self._active)
+                self._send({"op": "visibility", "visible": self._active})
                 self.ready.emit()
+            elif data.get("type") == "loading":
+                self.begin_loading("正在载入 Mori 页面…")
+                self._timeout.start(30000)
             elif data.get("type") == "error":
                 self._timeout.stop()
                 self._fail(str(data.get("message", "画布引擎启动失败。")))
@@ -189,8 +233,12 @@ class WebCanvas(QWidget):
     def _fail(self, message):
         if self._closed or not is_alive(self):
             return
-        self._status.setText(message)
-        self._status.show()
+        self._was_ready = False
+        self._surface_stack.setCurrentWidget(self._loading)
+        self._host.hide()
+        self._host_parent.hide()
+        self._loading.set_error(message)
+        self._send({"op": "visibility", "visible": False})
         self.error.emit(message)
 
     def _process_error(self, error):
@@ -262,6 +310,8 @@ class WebCanvas(QWidget):
         if clear_pending:
             self._pending_url = None
         self._stopping = True
+        if is_alive(self._loading):
+            self._loading.pause()
         if is_alive(self._timeout):
             self._timeout.stop()
         process = self._process

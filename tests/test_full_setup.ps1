@@ -1,8 +1,15 @@
 ﻿param(
     [Parameter(Mandatory=$true)][string]$Setup,
-    [Parameter(Mandatory=$true)][string]$OutputDirectory
+    [Parameter(Mandatory=$true)][string]$OutputDirectory,
+    [string]$ExpectedVersion = ''
 )
 $ErrorActionPreference = 'Stop'
+if (-not $ExpectedVersion) {
+    $versionFile = Join-Path $PSScriptRoot '..\mori_krita\version.py'
+    $versionMatch = [regex]::Match([IO.File]::ReadAllText($versionFile), '(?m)^VERSION = "([0-9]+\.[0-9]+\.[0-9]+)"\s*$')
+    if (-not $versionMatch.Success) { throw 'Expected release version could not be read.' }
+    $ExpectedVersion = $versionMatch.Groups[1].Value
+}
 $qa = [IO.Path]::GetFullPath($OutputDirectory)
 if (Test-Path -LiteralPath (Join-Path $qa 'payload')) { throw 'Use a fresh QA directory.' }
 New-Item -ItemType Directory -Path $qa -Force | Out-Null
@@ -35,7 +42,7 @@ $manifest = Get-Content -LiteralPath (Join-Path $qa 'payload\bundle-manifest.jso
 $recordPath = Join-Path $profile 'Programs\MoriKrita\installation.json'
 $record = Get-Content -LiteralPath $recordPath -Raw -Encoding UTF8 | ConvertFrom-Json
 Assert-Full ($record.installed -and $record.testOnly) 'Installed into the isolated test profile'
-Assert-Full ($record.versions.mori -eq '0.4.7') 'Expected Mori version installed'
+Assert-Full ($record.versions.mori -eq $ExpectedVersion -and $manifest.versions.mori -eq $ExpectedVersion) 'Expected Mori version installed'
 Assert-Full ($record.filesVerified -eq $manifest.files.Count) 'Every manifest entry verified by installer'
 Assert-Full ((Get-FileHash -LiteralPath $userData).Hash -eq $userHash) 'Existing user data preserved'
 $config = [IO.File]::ReadAllText($configPath)

@@ -135,12 +135,14 @@ class WebUpdateManager:
         self.bridge_version = bridge_version
         _version(bridge_version)
         self.minimum_canvas_sync = 0
+        self.minimum_browser_login = 0
         try:
             raw = (self.bundled_root / "ui-release.json").read_bytes()
             if len(raw) <= MAX_MANIFEST_BYTES:
                 meta = _metadata(_json(raw), bridge_version)
                 self.minimum_canvas_sync = int(_version(meta["bridgeMinVersion"]) >= (0, 4, 8))
                 self.minimum_canvas_sync = max(self.minimum_canvas_sync, self._canvas_sync(_json(raw)))
+                self.minimum_browser_login = self._browser_login(_json(raw))
         except (OSError, WebUpdateError):
             pass
         self._opener = urllib.request.build_opener(_NoRedirect(), urllib.request.HTTPSHandler(context=ssl.create_default_context()))
@@ -222,7 +224,16 @@ class WebUpdateManager:
         # cannot silently remove the synchronization and conflict handling.
         if self._canvas_sync(value) < self.minimum_canvas_sync:
             raise WebUpdateError("服务器尚未发布匹配的云端同步网页，已保留当前画布；请在更新页查看插件新版本。")
+        if self._browser_login(value) < self.minimum_browser_login:
+            raise WebUpdateError("网页更新尚未包含浏览器登录，已使用本机兼容网页。")
         return metadata
+
+    @staticmethod
+    def _browser_login(value):
+        contract = value.get("browserLoginVersion", 0)
+        if type(contract) is not int or contract < 0:
+            raise WebUpdateError("网页浏览器登录兼容信息无效。")
+        return contract
 
     @staticmethod
     def _canvas_sync(value):
@@ -272,7 +283,8 @@ class WebUpdateManager:
                 return None
             inner = _json((root / "ui-release.json").read_bytes())
             if (_metadata(inner, self.bridge_version) != meta
-                    or self._canvas_sync(inner) != self._canvas_sync(pointer)):
+                    or self._canvas_sync(inner) != self._canvas_sync(pointer)
+                    or self._browser_login(inner) != self._browser_login(pointer)):
                 return None
             return WebRelease(root, meta["uiVersion"], "cache")
         except (OSError, WebUpdateError, TypeError, AttributeError):
@@ -326,7 +338,8 @@ class WebUpdateManager:
             release_metadata = (stage / "ui-release.json").read_bytes()
             if (len(release_metadata) > MAX_MANIFEST_BYTES
                     or _metadata(_json(release_metadata), self.bridge_version) != metadata
-                    or self._canvas_sync(_json(release_metadata)) != self._canvas_sync(manifest)):
+                    or self._canvas_sync(_json(release_metadata)) != self._canvas_sync(manifest)
+                    or self._browser_login(_json(release_metadata)) != self._browser_login(manifest)):
                 raise WebUpdateError("网页更新包与发布版本不一致。")
             self._cancelled(cancel_event, deadline)
             digest = manifest["bundle"]["sha256"].lower()
@@ -343,7 +356,8 @@ class WebUpdateManager:
             else:
                 os.replace(str(stage), str(target))
             self._cancelled(cancel_event, deadline)
-            pointer = {**metadata, "canvasSyncVersion": self._canvas_sync(manifest), "bundleSha256": digest, "files": inventory}
+            pointer = {**metadata, "canvasSyncVersion": self._canvas_sync(manifest),
+                       "browserLoginVersion": self._browser_login(manifest), "bundleSha256": digest, "files": inventory}
             pointer_data = json.dumps(pointer, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
             if len(pointer_data) > MAX_MANIFEST_BYTES:
                 raise WebUpdateError("网页更新资源清单过大。")

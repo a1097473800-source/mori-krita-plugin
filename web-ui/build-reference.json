@@ -1,7 +1,8 @@
 {
-  "websiteSourceCommit": "913e23d2e1a3b8de6e8ba1a45f72251e87354701",
-  "uiVersion": "20261120-source-46242026a08b",
+  "websiteSourceCommit": "072f9bb5cc87",
+  "uiBundleSha256": "ee9a69f13fef7b8bf3fe803d4036cdbd82d28edb6d038d28f21a62842ed7f1c3",
+  "uiVersion": "20261120-072f9bb5cc87-81b74f7a5e2a",
+  "bridgeMinVersion": "0.4.12",
   "canvasSyncVersion": 1,
-  "bridgeMinVersion": "0.4.8",
-  "uiBundleSha256": "4bea85f6703f49ab284c231237183a417fbe64a7d2cb86144c6bb303ee6b9c44"
+  "browserLoginVersion": 1
 }

@@ -9,58 +9,62 @@ from PyQt5.QtWidgets import (QApplication, QButtonGroup, QDialog, QFrame,
 from .realtime_panel import _CompactComboBox, ui_icon
 from .update_dialog import STYLE as UPDATE_STYLE, UpdatePage, UpdateSwitch, WindowHeader, small_icon
 from .version import VERSION
+from .branding import MoriLogo
 
 
 STYLE = UPDATE_STYLE + """
-QWidget { font-family:'Microsoft YaHei UI'; font-size:12px; color:#eae7f0; }
+QWidget { font-family:'Microsoft YaHei UI'; font-size:12px; color:#e8e8e8; }
 QDialog#MoriSettings { background:transparent; }
-QFrame#SettingsWindow { background:#222225; border:1px solid #414047; border-radius:14px; }
-QFrame#SettingsHeader { background:transparent; border:0; border-bottom:1px solid #34343b; }
-QLabel#SettingsBrand { font-family:'Segoe UI'; font-size:16px; font-weight:700; letter-spacing:2px; color:#faf8ff; }
-QLabel#SettingsWindowTitle { color:#b6b1c2; font-size:13px; }
-QLabel#SettingsVersion { font-family:'Segoe UI'; font-size:11px; color:#8b8797; }
-QFrame#SettingsSidebar { background:#1d1d21; border:0; border-bottom-left-radius:13px; }
-QLabel#SettingsEyebrow { color:#787381; font-size:10px; }
+QFrame#SettingsWindow { background:#222222; border:1px solid #414141; border-radius:14px; }
+QFrame#SettingsHeader { background:transparent; border:0; border-bottom:1px solid #353535; }
+QLabel#SettingsBrand { font-family:'Segoe UI'; font-size:16px; font-weight:700; letter-spacing:2px; color:#f9f9f9; }
+QLabel#SettingsWindowTitle { color:#b3b3b3; font-size:13px; }
+QLabel#SettingsVersion { font-family:'Segoe UI'; font-size:11px; color:#898989; }
+QFrame#SettingsSidebar { background:#1d1d1d; border:0; border-bottom-left-radius:13px; }
+QLabel#SettingsEyebrow { color:#757575; font-size:10px; }
 QPushButton#SettingsNav { background:transparent; border:1px solid transparent; border-radius:7px;
-    color:#aaa5b5; text-align:left; padding:0 12px; min-height:41px; font-size:12px; }
-QPushButton#SettingsNav:hover { background:#29272f; color:#ede7f8; }
-QPushButton#SettingsNav:checked { background:#332c42; border-color:#463955; color:#d9c9fb; }
-QPushButton#SettingsNav:focus { border-color:#8c76b7; }
-QLabel#SettingsSideNote { color:#706b7c; font-size:10px; }
+    color:#a7a7a7; text-align:left; padding:0 12px; min-height:41px; font-size:12px; }
+QPushButton#SettingsNav:hover { background:#282828; color:#eaeaea; }
+QPushButton#SettingsNav:checked { background:#2f2f2f; border-color:#3e3e3e; color:#d0d0d0; }
+QPushButton#SettingsNav:focus { border-color:#7f7f7f; }
+QLabel#SettingsSideNote { color:#6d6d6d; font-size:10px; }
 QStackedWidget#SettingsPages, QWidget#SettingsPage, QScrollArea#SettingsScroll { background:transparent; border:0; }
-QScrollArea#SettingsScroll > QWidget > QWidget { background:#222225; }
-QLabel#SettingsPageTitle { font-size:22px; font-weight:600; color:#f1edf7; }
-QLabel#SettingsPageSubtitle { color:#8f899d; font-size:12px; }
-QLabel#SettingsSection { color:#928a9f; font-size:11px; }
-QFrame#SettingsCard { background:#29292e; border:1px solid #34343b; border-radius:10px; }
+QScrollArea#SettingsScroll > QWidget > QWidget { background:#222222; }
+QLabel#SettingsPageTitle { font-size:22px; font-weight:600; color:#efefef; }
+QLabel#SettingsPageSubtitle { color:#8c8c8c; font-size:12px; }
+QLabel#SettingsSection { color:#8d8d8d; font-size:11px; }
+QFrame#SettingsCard { background:#292929; border:1px solid #353535; border-radius:10px; }
 QFrame#SettingsRow { background:transparent; border:0; }
-QFrame#SettingsDivider { background:#3a383f; border:0; }
-QLabel#SettingsRowTitle { color:#e1dce9; font-size:12px; font-weight:500; }
-QLabel#SettingsRowHint { color:#918a9d; font-size:11px; }
-QLabel#SettingsTip { color:#8e879c; font-size:11px; }
-QComboBox { background:#333139; border:1px solid #44404d; border-radius:6px; padding:7px 23px 7px 10px; color:#dfd6ee; min-height:18px; }
-QComboBox:hover { border-color:#736480; }
-QComboBox:focus { border-color:#b3a0df; }
-QComboBox:disabled { color:#847d90; background:#2b2930; border-color:#39353e; }
+QFrame#SettingsDivider { background:#393939; border:0; }
+QLabel#SettingsRowTitle { color:#dedede; font-size:12px; font-weight:500; }
+QLabel#SettingsRowHint { color:#8d8d8d; font-size:11px; }
+QLabel#SettingsTip { color:#8a8a8a; font-size:11px; }
+QComboBox { background:#323232; border:1px solid #424242; border-radius:6px; padding:7px 23px 7px 10px; color:#dadada; min-height:18px; }
+QComboBox:hover { border-color:#696969; }
+QComboBox:focus { border-color:#a9a9a9; }
+QComboBox:disabled { color:#808080; background:#2a2a2a; border-color:#373737; }
 QComboBox::drop-down { border:0; width:22px; }
-QComboBox QAbstractItemView { background:#29262f; color:#eae4f5; selection-background-color:#484052; border:1px solid #514859; padding:4px; }
-QPushButton#SettingsChoice { background:#29292e; border:1px solid #3a373f; border-radius:9px; padding:15px; min-height:65px; text-align:left; }
-QPushButton#SettingsChoice:hover { background:#302d37; border-color:#77668d; }
-QPushButton#SettingsChoice:checked { background:#342d42; border:1px solid #9881bd; }
-QLabel#SettingsChoiceTitle { color:#e9e1f5; font-size:13px; font-weight:500; }
-QLabel#SettingsChoiceHint { color:#938b9f; font-size:11px; }
-QLabel#SettingsRecommended { color:#c2a8ed; font-size:10px; }
-QFrame#SettingsSegment { background:#242229; border:1px solid #3e3847; border-radius:7px; }
-QPushButton#SettingsSegmentButton { background:transparent; border:0; border-radius:5px; padding:0 9px; min-height:30px; color:#9d94ac; font-size:11px; }
-QPushButton#SettingsSegmentButton:checked { background:#494052; color:#e9dcfa; }
-QPushButton#SettingsSegmentButton:focus { border:1px solid #ad95d1; }
-QFrame#SettingsFooter { background:transparent; border:0; border-top:1px solid #34313a; }
-QPushButton#SettingsReset { background:transparent; border:0; padding:0; min-height:32px; color:#9c93aa; font-size:11px; }
-QPushButton#SettingsReset:hover { color:#d3c1ef; }
-QLabel#SettingsSaved { color:#8c8399; font-size:11px; }
-QPushButton#SettingsDone { background:#bba5e9; color:#2a2235; border:0; border-radius:7px; min-height:34px; padding:0 24px; font-size:12px; font-weight:600; }
-QPushButton#SettingsDone:hover { background:#cbb8f4; }
-QPushButton#SettingsDone:focus { border:1px solid #eee0ff; }
+QComboBox QAbstractItemView { background:#272727; color:#e7e7e7; selection-background-color:#434343; border:1px solid #4b4b4b; padding:4px; }
+QPushButton#SettingsChoice { background:#292929; border:1px solid #383838; border-radius:9px; padding:15px; min-height:65px; text-align:left; }
+QPushButton#SettingsChoice:hover { background:#2e2e2e; border-color:#6c6c6c; }
+QPushButton#SettingsChoice:checked { background:#303030; border:1px solid #8a8a8a; }
+QLabel#SettingsChoiceTitle { color:#e4e4e4; font-size:13px; font-weight:500; }
+QLabel#SettingsChoiceHint { color:#8e8e8e; font-size:11px; }
+QLabel#SettingsRecommended { color:#b3b3b3; font-size:10px; }
+QFrame#SettingsSegment { background:#232323; border:1px solid #3a3a3a; border-radius:7px; }
+QPushButton#SettingsSegmentButton { background:transparent; border:0; border-radius:5px; padding:0 9px; min-height:30px; color:#989898; font-size:11px; }
+QPushButton#SettingsSegmentButton:checked { background:#434343; color:#e1e1e1; }
+QPushButton#SettingsSegmentButton:focus { border:1px solid #9e9e9e; }
+QFrame#SettingsFooter { background:transparent; border:0; border-top:1px solid #323232; }
+QPushButton#SettingsReset { background:transparent; border:0; padding:0; min-height:32px; color:#979797; font-size:11px; }
+QPushButton#SettingsReset:hover { color:#c8c8c8; }
+QLabel#SettingsSaved { color:#878787; font-size:11px; }
+QPushButton#SettingsDone { background:#6845ff; color:#ffffff; border:0; border-radius:7px; min-height:34px; padding:0 24px; font-size:12px; font-weight:600; }
+QPushButton#SettingsDone:hover { background:#795bff; }
+QPushButton#SettingsDone:focus { border:1px solid #b3a3ff; }
+QPushButton#SettingsAction { background:#6845ff; color:#ffffff; border:0; border-radius:6px; min-height:32px; padding:0 14px; }
+QPushButton#SettingsAction:hover { background:#795bff; }
+QPushButton#SettingsAction:disabled { background:#3a3a3a; color:#858585; }
 QSizeGrip { background:transparent; width:12px; height:12px; }
 """
 
@@ -134,8 +138,10 @@ class ChoiceCard(QPushButton):
 
 class SettingsDialog(QDialog):
     page_changed = pyqtSignal(str)
+    recovery_requested = pyqtSignal(str)
     PAGES = (("canvas", "画布与图层", "layers"),
              ("realtime", "实时与选区", "sliders"),
+             ("connection", "连接与恢复", "refresh"),
              ("updates", "更新与版本", "refresh"))
 
     def __init__(self, docker):
@@ -163,10 +169,9 @@ class SettingsDialog(QDialog):
         row = QHBoxLayout(header)
         row.setContentsMargins(24, 10, 17, 10)
         row.setSpacing(15)
-        row.addWidget(label("MORI", "SettingsBrand", False))
+        row.addWidget(MoriLogo(20))
         row.addWidget(label("/   插件设置", "SettingsWindowTitle", False))
         row.addStretch()
-        row.addWidget(label("v" + VERSION, "SettingsVersion", False))
         self.close_button = QToolButton()
         self.close_button.setObjectName("UpdateClose")
         self.close_button.setFixedSize(28, 28)
@@ -197,14 +202,14 @@ class SettingsDialog(QDialog):
             button.setObjectName("SettingsNav")
             button.setCheckable(True)
             button.setCursor(Qt.PointingHandCursor)
-            button.setIcon(ui_icon(icon, "#b4a7c7"))
+            button.setIcon(ui_icon(icon, "#b4b4b4"))
             button.setIconSize(QSize(17, 17))
             button.clicked.connect(lambda checked, key=page: self.set_page(key))
             self.nav_group.addButton(button)
             self.navigation[page] = button
             side.addWidget(button)
         side.addStretch()
-        side_note = label("你的创作，\n你的习惯。", "SettingsSideNote")
+        side_note = label("Mori for Krita\nv" + VERSION, "SettingsVersion")
         side_note.setContentsMargins(12, 0, 0, 1)
         side.addWidget(side_note)
         body.addWidget(sidebar)
@@ -215,6 +220,7 @@ class SettingsDialog(QDialog):
         self._page_widgets = {}
         self._build_canvas()
         self._build_realtime()
+        self._build_connection()
         update_layout = self._page("updates", "更新与版本", "保持 Mori 插件与工作台同步更新。")
         self.updates = UpdatePage(VERSION, docker._settings.value("automaticUpdates", True, type=bool))
         update_layout.addWidget(self.updates)
@@ -377,6 +383,38 @@ class SettingsDialog(QDialog):
         layout.addWidget(card)
         layout.addStretch()
 
+    def _build_connection(self):
+        layout = self._page("connection", "连接与恢复", "页面空白或连接异常时，可以在这里恢复。")
+        layout.addWidget(label("工作台", "SettingsSection"))
+        card, rows = self._card()
+        self.recovery_buttons = {}
+        actions = (("page", "刷新工作台页面", "重新载入当前页面，适用于空白、卡住或显示不完整。", "刷新页面"),
+                   ("reconnect", "重新连接工作台", "重启工作台连接。刷新页面后仍未恢复时使用。", "重新连接"))
+        for index, (key, title, hint, caption) in enumerate(actions):
+            button = self._recovery_button(key, caption)
+            self._row(rows, title, hint, button, bool(index))
+        layout.addWidget(card)
+        layout.addWidget(label("画面与账号", "SettingsSection"))
+        card, rows = self._card()
+        for index, (key, title, hint, caption) in enumerate((
+                ("canvas", "刷新画面", "重新绘制 Krita 画布与插件面板，更新图层列表。", "刷新画面"),
+                ("account", "刷新账号与积分", "重新获取当前账号的连接状态与积分余额。", "刷新账号"))):
+            button = self._recovery_button(key, caption)
+            self._row(rows, title, hint, button, bool(index))
+        layout.addWidget(card)
+        self.recovery_status = label("建议先刷新页面，仍未恢复时再重新连接工作台。", "SettingsTip")
+        layout.addWidget(self.recovery_status)
+        layout.addStretch()
+
+    def _recovery_button(self, key, caption):
+        button = QPushButton(caption)
+        button.setObjectName("SettingsAction")
+        button.setCursor(Qt.PointingHandCursor)
+        button.setMinimumWidth(104)
+        button.clicked.connect(lambda checked, action=key: self.recovery_requested.emit(action))
+        self.recovery_buttons[key] = button
+        return button
+
     def _connect_controls(self):
         dock, panel = self.docker, self.docker._realtime_panel
         self.reference_group.idClicked.connect(dock._reference_mode.setCurrentIndex)
@@ -426,9 +464,9 @@ class SettingsDialog(QDialog):
             key = "canvas"
         self.pages.setCurrentWidget(self._page_widgets[key])
         self.navigation[key].setChecked(True)
-        self.reset.setVisible(key != "updates")
+        self.reset.setVisible(key in ("canvas", "realtime"))
         self.updates.checked_at.setVisible(key == "updates")
-        self.saved.setVisible(key != "updates")
+        self.saved.setVisible(key in ("canvas", "realtime"))
         self.update_actions.setVisible(key == "updates")
         self.current_page = key
         self.page_changed.emit(key)

@@ -19,12 +19,12 @@ QFrame#MoriCard { background:#242429; border:1px solid #35353d; border-radius:8p
 QLabel { background:transparent; color:#e9e9ef; border:0; }
 QLabel[role='muted'] { color:#a4a1ae; font-size:11px; }
 QLabel[role='section'] { font-size:12px; font-weight:600; color:#e3e3eb; }
-QPushButton, QToolButton { background:#2a2a2f; border:1px solid #39383e; border-radius:5px; padding:5px 8px; color:#dedee8; }
+QPushButton, QToolButton { background:#303035; border:1px solid #39393e; border-radius:5px; padding:5px 8px; color:#eeeeee; }
 QPushButton:hover, QToolButton:hover { background:#37343e; border-color:#777083; }
 QPushButton:disabled, QToolButton:disabled { background:#25252b; color:#666674; border-color:#303037; }
-QPushButton[role='primary'] { background:#baa6fa; color:#241d36; border:0; font-weight:500; padding:8px 10px; }
-QPushButton[role='primary']:hover { background:#cbbfff; }
-QPushButton[role='primary']:disabled { background:#3c354f; color:#8c809f; }
+QPushButton[role='primary'] { background:#6845ff; color:#ffffff; border:0; font-weight:500; padding:8px 10px; }
+QPushButton[role='primary']:hover { background:#795bff; }
+QPushButton[role='primary']:disabled { background:#303035; color:#777777; }
 QToolButton[role='ghost'], QToolButton[role='window'], QToolButton[role='mode'] { background:transparent; border:0; color:#a4a1ae; padding:3px 6px; }
 QToolButton[role='window'] { padding:0; }
 QToolButton[role='mode'] { color:#eeedf2; padding:3px 14px 3px 5px; }
@@ -571,7 +571,7 @@ class RealtimePanel(QWidget):
         self.generate.setProperty("role", "primary")
         self.generate.setMinimumHeight(32)
         self.generate.setIconSize(QSize(13, 13))
-        self.generate.setIcon(ui_icon("play", "#241d36"))
+        self.generate.setIcon(ui_icon("play", "#ffffff"))
         self.generate.setToolTip("开始实时：停笔后自动更新预览")
         self.generate.setAccessibleName("开始实时")
         self.generate.clicked.connect(lambda: self.live.setChecked(not self.live.isChecked()))
@@ -942,7 +942,7 @@ class RealtimePanel(QWidget):
         self.generate.setText("暂停" if live else "开始")
         self.generate.setAccessibleName("暂停实时" if live else "开始实时")
         self.generate.setToolTip("暂停后续自动生成，当前任务会继续完成" if live else "开始实时：停笔后自动更新预览")
-        self.generate.setIcon(ui_icon("pause" if live else "play", "#d3c0f5" if live else "#241d36"))
+        self.generate.setIcon(ui_icon("pause" if live else "play", "#ffffff"))
         self.generate.setProperty("live", live)
         self.generate.style().unpolish(self.generate)
         self.generate.style().polish(self.generate)

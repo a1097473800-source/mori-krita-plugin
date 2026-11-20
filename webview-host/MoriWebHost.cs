@@ -40,7 +40,7 @@ internal static class Program
         try
         {
             // WinExe has no console window. Initialize the redirected pipes explicitly.
-            Console.SetIn(new StreamReader(Console.OpenStandardInput(), new UTF8Encoding(false)));
+            Console.SetIn(new PipeCommandReader(Console.OpenStandardInput()));
             Console.SetOut(new StreamWriter(Console.OpenStandardOutput(), new UTF8Encoding(false)) { AutoFlush = true });
             string line = Console.ReadLine();
             if (String.IsNullOrEmpty(line) || line.Length > 32768)
@@ -63,7 +63,9 @@ internal static class Program
             catch (EntryPointNotFoundException) { }
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-            using (HostForm form = new HostForm(parent, url, profile))
+            object requested;
+            bool visible = !config.TryGetValue("visible", out requested) || Convert.ToBoolean(requested);
+            using (HostForm form = new HostForm(parent, url, profile, visible))
             using (HostApplicationContext context = new HostApplicationContext(form))
             {
                 Application.Run(context);
@@ -75,6 +77,55 @@ internal static class Program
             Send("error", "无法启动内嵌画布（" + ex.GetType().Name + "）。请检查 WebView2 Runtime。");
             return 1;
         }
+    }
+}
+
+internal sealed class PipeCommandReader : TextReader
+{
+    private readonly Stream input;
+    private readonly UTF8Encoding encoding = new UTF8Encoding(false, true);
+    private readonly byte[] buffer = new byte[4096];
+    private int offset, count;
+
+    internal PipeCommandReader(Stream stream) { input = stream; }
+
+    public override string ReadLine()
+    {
+        // Bound every JSON line, including the initial private configuration.
+        var bytes = new List<byte>();
+        int value;
+        while ((value = ReadPipeByte()) >= 0)
+        {
+            if (value == 10) break;
+            if (bytes.Count >= 32768) throw new InvalidDataException("Command too long");
+            bytes.Add((byte)value);
+        }
+        if (value < 0 && bytes.Count == 0) return null;
+        if (bytes.Count > 0 && bytes[bytes.Count - 1] == 13) bytes.RemoveAt(bytes.Count - 1);
+        return encoding.GetString(bytes.ToArray());
+    }
+
+    private int ReadPipeByte()
+    {
+        if (offset >= count)
+        {
+            // Qt provides an overlapped Windows pipe. A pending synchronous
+            // ConsoleStream read can stall even after the next command arrives.
+            // Read only currently available bytes, so visibility/reload/close
+            // remain responsive without replacing the private pipe transport.
+            uint available;
+            while (true)
+            {
+                if (!Native.PeekNamedPipe(Native.GetStdHandle(-10), IntPtr.Zero, 0, IntPtr.Zero, out available, IntPtr.Zero))
+                    return -1;
+                if (available > 0) break;
+                System.Threading.Thread.Sleep(10);
+            }
+            count = input.Read(buffer, 0, (int)Math.Min(available, (uint)buffer.Length));
+            offset = 0;
+            if (count == 0) return -1;
+        }
+        return buffer[offset++];
     }
 }
 
@@ -98,6 +149,7 @@ internal sealed class HostForm : Form
     private readonly string profileDirectory;
     private readonly WebView2 browser;
     private readonly Timer resizeTimer;
+    private readonly TextReader commandInput;
     private readonly string gestureNonce = Guid.NewGuid().ToString("N");
     private DateTime downloadGestureUntil = DateTime.MinValue;
     private volatile bool closed;
@@ -105,6 +157,11 @@ internal sealed class HostForm : Form
     private bool browserReleaseAttempted;
     private CoreWebView2 coreView;
     private CoreWebView2Environment browserEnvironment;
+    private bool requestedVisible;
+    private bool pageReady;
+    private bool initializationStarted;
+    private string navigationNonce;
+    private int lastWidth = -1, lastHeight = -1;
 
     internal bool IsShuttingDown { get { return closed; } }
 
@@ -113,19 +170,22 @@ internal sealed class HostForm : Form
         get { return !closed && !IsDisposed && !Disposing && !browser.IsDisposed && !browser.Disposing; }
     }
 
-    internal HostForm(IntPtr parent, Uri url, string profile)
+    internal HostForm(IntPtr parent, Uri url, string profile, bool visible = true)
     {
         parentWindow = parent;
         initialUrl = url;
         origin = url.GetLeftPart(UriPartial.Authority);
         profileDirectory = profile;
+        requestedVisible = visible;
+        commandInput = Console.In;
+        TopLevel = false;
         Text = "Mori Krita 画布";
         FormBorderStyle = FormBorderStyle.None;
         ShowInTaskbar = false;
         StartPosition = FormStartPosition.Manual;
         Location = new Point(0, 0);
         Size = new Size(800, 600);
-        BackColor = Color.FromArgb(16, 17, 18);
+        BackColor = Color.FromArgb(34, 34, 34);
         AutoScaleMode = AutoScaleMode.None;
         browser = new HostedWebView2(delegate { return closed || !Native.IsWindow(parentWindow); });
         browser.Dock = DockStyle.Fill;
@@ -134,10 +194,59 @@ internal sealed class HostForm : Form
         resizeTimer = new Timer();
         resizeTimer.Interval = 100;
         resizeTimer.Tick += delegate { SyncBounds(); };
-        Shown += async delegate { await InitializeBrowser(); };
     }
 
     protected override bool ShowWithoutActivation { get { return true; } }
+
+    protected override CreateParams CreateParams
+    {
+        get
+        {
+            CreateParams value = base.CreateParams;
+            // Create as a hidden child from the first HWND. Reparenting a shown
+            // top-level Form briefly exposes an 800x600 black window on desktop.
+            value.Parent = parentWindow;
+            value.Style = (int)(((long)value.Style | Native.WS_CHILD | Native.WS_CLIPCHILDREN | Native.WS_CLIPSIBLINGS)
+                & ~Native.WS_POPUP & ~Native.WS_VISIBLE);
+            value.ExStyle = (value.ExStyle | 0x08000000 | 0x00000080) & ~0x00040000;
+            value.X = 0; value.Y = 0;
+            Native.Rect rect;
+            if (Native.GetClientRect(parentWindow, out rect))
+            {
+                value.Width = Math.Max(1, rect.Right); value.Height = Math.Max(1, rect.Bottom);
+            }
+            return value;
+        }
+    }
+
+    protected override void SetVisibleCore(bool value)
+    {
+        if (value && !IsHandleCreated && !closed) CreateHandle();
+        base.SetVisibleCore(value && pageReady && requestedVisible && !closed
+            && Native.IsWindowVisible(parentWindow));
+    }
+
+    protected override void OnHandleCreated(EventArgs args)
+    {
+        base.OnHandleCreated(args);
+        if (initializationStarted || closed) return;
+        initializationStarted = true;
+        // A hidden Form has no Shown event. Initialize through its message loop.
+        BeginInvoke((Action)(async delegate
+        {
+            if (!BrowserAvailable) return;
+            resizeTimer.Start();
+            Task.Run((Action)ReadCommands);
+            await InitializeBrowser();
+        }));
+    }
+
+    private void ApplyVisibility()
+    {
+        if (!BrowserAvailable || !IsHandleCreated) return;
+        bool visible = requestedVisible && pageReady && Native.IsWindowVisible(parentWindow);
+        if (visible != Visible) base.SetVisibleCore(visible);
+    }
 
     private void BeginShutdown()
     {
@@ -317,9 +426,20 @@ internal sealed class HostForm : Form
     {
         if (!BrowserAvailable) return;
         if (!Native.IsWindow(parentWindow)) { Close(); return; }
+        // WinForms may park a non-managed child during handle creation or Show.
+        // Restore the foreign Qt parent while this child is still hidden.
+        if (Native.GetParent(Handle) != parentWindow) Native.SetParent(Handle, parentWindow);
         Native.Rect rect;
         if (Native.GetClientRect(parentWindow, out rect))
-            Native.MoveWindow(Handle, 0, 0, Math.Max(1, rect.Right), Math.Max(1, rect.Bottom), true);
+        {
+            int width = Math.Max(1, rect.Right), height = Math.Max(1, rect.Bottom);
+            if (width != lastWidth || height != lastHeight)
+            {
+                Native.MoveWindow(Handle, 0, 0, width, height, true);
+                lastWidth = width; lastHeight = height;
+            }
+        }
+        ApplyVisibility();
     }
 
     private async Task InitializeBrowser()
@@ -327,13 +447,7 @@ internal sealed class HostForm : Form
         try
         {
             if (!BrowserAvailable) return;
-            long style = Native.GetWindowStyle(Handle);
-            style = (style | Native.WS_CHILD | Native.WS_VISIBLE) & ~Native.WS_POPUP;
-            Native.SetWindowStyle(Handle, style);
-            Native.SetParent(Handle, parentWindow);
             SyncBounds();
-            resizeTimer.Start();
-            Task.Run((Action)ReadCommands);
             CoreWebView2Environment environment = await CoreWebView2Environment.CreateAsync(null, profileDirectory);
             if (!BrowserAvailable) return;
             await browser.EnsureCoreWebView2Async(environment);
@@ -386,7 +500,12 @@ internal sealed class HostForm : Form
         {
             args.Cancel = true;
             OpenExternal(args.Uri, args.IsUserInitiated);
+            return;
         }
+        navigationNonce = Guid.NewGuid().ToString("N");
+        pageReady = false;
+        ApplyVisibility();
+        Program.Send("loading", "正在载入 Mori 页面…");
     }
 
     private void OnNewWindowRequested(object sender, CoreWebView2NewWindowRequestedEventArgs args)
@@ -409,6 +528,24 @@ internal sealed class HostForm : Form
     private void OnWebMessageReceived(object sender, CoreWebView2WebMessageReceivedEventArgs args)
     {
         ReadGesture(args);
+        if (!BrowserAvailable || !SameOrigin(args.Source) || pageReady) return;
+        string message = args.WebMessageAsJson;
+        if (String.IsNullOrEmpty(message) || message.Length > 256) return;
+        try
+        {
+            Dictionary<string, object> value = Program.Json.Deserialize<Dictionary<string, object>>(message);
+            object kind, nonce;
+            if (value != null && value.Count == 2 && value.TryGetValue("type", out kind)
+                && value.TryGetValue("nonce", out nonce) && navigationNonce != null
+                && Convert.ToString(kind) == "mori-ui-ready" && Convert.ToString(nonce) == navigationNonce)
+            {
+                pageReady = true;
+                SyncBounds();
+                Program.Send("ready", "Mori 工作台已准备好");
+            }
+        }
+        catch (ArgumentException) { }
+        catch (InvalidOperationException) { }
     }
 
     private void OnWebResourceRequested(object sender, CoreWebView2WebResourceRequestedEventArgs args)
@@ -421,11 +558,30 @@ internal sealed class HostForm : Form
             args.Response = browserEnvironment.CreateWebResourceResponse(null, 403, "Forbidden", "Content-Type: text/plain\r\n");
     }
 
-    private void OnNavigationCompleted(object sender, CoreWebView2NavigationCompletedEventArgs args)
+    private async void OnNavigationCompleted(object sender, CoreWebView2NavigationCompletedEventArgs args)
     {
         if (!BrowserAvailable) return;
-        if (args.IsSuccess) Program.Send("ready", "Mori 画布已连接");
-        else Program.Send("error", "画布加载失败（" + args.WebErrorStatus.ToString() + "）。");
+        if (!args.IsSuccess || args.HttpStatusCode >= 400)
+        {
+            Program.Send("error", "画布加载失败（" + args.WebErrorStatus.ToString() + "）。");
+            return;
+        }
+        string nonce = navigationNonce;
+        // NavigationCompleted alone can precede React's first render and account
+        // hydration. Wait for usable DOM and fonts; timers work while hidden,
+        // whereas requestAnimationFrame can pause in a hidden WebView.
+        string script = "(function(){if(window.top!==window)return;var sent=false;"
+            + "var timer=setInterval(check,50),watch=new MutationObserver(check);watch.observe(document,{childList:true,subtree:true});"
+            + "function check(){if(sent||document.readyState==='loading')return;var root=document.getElementById('root'),target=root||document.body;"
+            + "if(!target||!target.childElementCount)return;"
+            + "if(root&&!root.firstElementChild)return;var connection=root&&root.querySelector('.mori-auth-connection');"
+            + "if(root&&root.querySelector('.loading-screen')||connection&&!connection.querySelector('button'))return;"
+            + "sent=true;clearInterval(timer);watch.disconnect();"
+            + "Promise.resolve(document.fonts?document.fonts.ready:null).then(function(){setTimeout(function(){"
+            + "window.chrome.webview.postMessage({type:'mori-ui-ready',nonce:'" + nonce + "'});},80);});}check();})();";
+        try { await coreView.ExecuteScriptAsync(script); }
+        catch (InvalidOperationException) { if (BrowserAvailable) Program.Send("error", "画布尚未准备好，请重新加载。"); }
+        catch (COMException) { if (BrowserAvailable) Program.Send("error", "画布尚未准备好，请重新加载。"); }
     }
 
     private void OnProcessFailed(object sender, CoreWebView2ProcessFailedEventArgs args)
@@ -436,15 +592,8 @@ internal sealed class HostForm : Form
     private void SetEmbeddedVisible(bool visible)
     {
         if (closed) return;
-        if (visible)
-        {
-            if (!Visible) Show();
-            SyncBounds();
-        }
-        else if (Visible)
-        {
-            Hide();
-        }
+        requestedVisible = visible;
+        SyncBounds();
     }
 
     private void ReadCommands()
@@ -452,7 +601,7 @@ internal sealed class HostForm : Form
         try
         {
             string line;
-            while ((line = Console.ReadLine()) != null)
+            while ((line = commandInput.ReadLine()) != null)
             {
                 if (line.Length > 32768) break;
                 Dictionary<string, object> command = new JavaScriptSerializer().Deserialize<Dictionary<string, object>>(line);
@@ -476,6 +625,11 @@ internal sealed class HostForm : Form
                 }
                 if (op == "focus" && !closed)
                     BeginInvoke((Action)delegate { if (BrowserAvailable) browser.Focus(); });
+                if (op == "reload" && !closed)
+                    BeginInvoke((Action)delegate
+                    {
+                        if (BrowserAvailable && coreView != null) coreView.Reload();
+                    });
             }
         }
         catch (Exception) { }
@@ -588,12 +742,18 @@ internal static class HostShutdown
 
 internal static class Native
 {
+    [DllImport("kernel32.dll")] internal static extern IntPtr GetStdHandle(int handle);
+    [DllImport("kernel32.dll")] internal static extern bool PeekNamedPipe(IntPtr handle, IntPtr data, uint size, IntPtr read, out uint available, IntPtr remaining);
     internal const long WS_CHILD = 0x40000000L;
     internal const long WS_VISIBLE = 0x10000000L;
     internal const long WS_POPUP = 0x80000000L;
+    internal const long WS_CLIPCHILDREN = 0x02000000L;
+    internal const long WS_CLIPSIBLINGS = 0x04000000L;
     [StructLayout(LayoutKind.Sequential)]
     internal struct Rect { internal int Left, Top, Right, Bottom; }
     [DllImport("user32.dll")] internal static extern bool IsWindow(IntPtr hWnd);
+    [DllImport("user32.dll")] internal static extern bool IsWindowVisible(IntPtr hWnd);
+    [DllImport("user32.dll")] internal static extern IntPtr GetParent(IntPtr hWnd);
     [DllImport("user32.dll")] internal static extern bool GetClientRect(IntPtr hWnd, out Rect rect);
     [DllImport("user32.dll")] internal static extern IntPtr SetParent(IntPtr child, IntPtr parent);
     [DllImport("user32.dll")] internal static extern bool MoveWindow(IntPtr hWnd, int x, int y, int width, int height, bool repaint);

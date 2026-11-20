@@ -1,40 +1,50 @@
-# Mori for Krita 0.4.11
+# Mori for Krita 0.4.15
 
-移除标题栏多余的浮动／停靠按钮，保留齿轮设置与关闭按钮；参考图默认采用原图无损上传。
+支持系统浏览器 Google 登录，修复工作台空白和切换时的黑色窗口闪烁。
 
 ## 本次更新
 
-- 「原图无损」设为默认及推荐选项，使用原始尺寸的无损 PNG，保留线稿、文字和纹理细节。
-- 修复实时模式固定使用快速参考的问题，现在工作台、实时、选区助手均遵循参考图设置。
-- 「快速参考」仍可手动选择，说明中明确提示缩小和有损压缩可能减少细节。
-- 设置中区分参考图上传质量与生成输出分辨率；已有用户的主动选择保持不变。
-- 结果图仍下载完整图片并等比放入原位置，保留原生设置、版本检查与云端同步功能。
+- 原生登录窗口和工作台均提供「通过浏览器登录（支持 Google）」。在浏览器确认后，插件自动使用原账号登录，保留积分和画布。
+- 浏览器授权完成页保留原按钮样式，显示「授权成功」和「请返回 Krita 继续创作」，按钮不跳转网站。配套云端登录服务已经上线。
+- 网页更新独立校验浏览器登录能力，旧缓存不能覆盖新版登录入口。
+- 工作台加载时播放 Mori SVG 路径动画，不显示加载说明文字；页面准备完成后才显示浏览器。
+- 修复 Windows 进程管道读取停滞导致工作台空白的问题，以及切换、隐藏面板时外部窗口闪烁的问题。
+- 设置新增「连接与恢复」：刷新工作台页面、重新连接工作台、刷新画面、刷新账号与积分。刷新不会提交生成任务。
+- 统一使用连写 Mori 矢量标志。设置使用黑白灰配色，主要按钮为紫色；选中描边为灰色，版本号位于左下角。
+- 保留原图无损默认、实时模式、选区助手、云端画布同步和版本冲突保护。
 
 ## 安装
 
-这是已安装 Mori 0.3.0–0.4.11 的 Windows 小更新包。
+首次安装：下载 `Mori-Krita-0.4.15-Windows-x64-Setup.exe`，保存作品并退出 Krita，然后运行安装程序。
+完整包包含 Krita 5.3.4.1、Mori 0.4.15、AI Diffusion 1.49.0、Vision Tools 2.2.0 和 WebView2 离线运行组件。
+
+已安装 Mori 0.3.0–0.4.15 的 Windows 用户：
 
 1. 保存作品，完全退出 Krita。
-2. 完整解压 Compatibility-Update.zip。
+2. 完整解压 `Mori-Krita-0.4.15-Compatibility-Update.zip`。
 3. 双击「更新已安装插件.cmd」。
-4. 重开 Krita，点击 Mori 面板右上角齿轮「设置」。
+4. 重开 Krita，在「设置 → 更新与版本」核对版本。
 
-旧插件尚无原生更新检查，需要先手动安装这一次。此后可在插件中接收后续已发布版本提醒。
-安装器先备份原插件，保留账号、画布和其他插件；运行中的 Python 模块仍需重开 Krita 后生效。
-工作台网页已打开时，新下载的网页将在下次重开 Krita 后生效，避免混用资源。
+更新器先备份原插件，保留账号、画布和其他插件。工作台网页已打开时，新下载的网页在重开 Krita 后生效。
 
 ## 维护
 
-公开插件版本清单位于 /krita-plugin/manifest.json；工作台网页清单位于 /krita-ui/manifest.json。
-工作台使用 bridgeMinVersion: 0.4.8 和 canvasSyncVersion: 1；未来网页构建必须保留云端同步声明和行为。
-原生小更新包发布到本仓库 Releases 后，再发布官网插件清单，确保下载地址可用。
-网页打包说明与源码版本见 web-ui/build-reference.json；网站工程由独立私有仓库维护。
+插件发布清单：`https://morinet.chat/krita-plugin/manifest.json`。
+工作台网页清单：`https://morinet.chat/krita-ui/manifest.json`。
+先发布 GitHub Releases 中的安装文件并校验，再更新官网插件清单。
+
+工作台使用 `bridgeMinVersion: 0.4.12`、`canvasSyncVersion: 1` 和 `browserLoginVersion: 1`。
+网站工程由独立私有仓库维护，随包网页的源码版本和校验值见 `web-ui/build-reference.json`。
+插件使用已验证的 WebView2 宿主 0.4.14；宿主和插件版本独立校验。
 
 运行验证：
-- python -m unittest discover -s tests -p test_plugin_updates.py
-- python -m unittest discover -s tests -p test_web_updates.py
-- node --test tests/cloud-sync.test.mjs
-- scripts/run-native-qa.ps1 -KritaRunner <kritarunner.com> -Suite run_update_qa
-- tests/test_updater.ps1
 
-本包使用已验证的 WebView2 宿主 0.4.8。支持资源说明见 THIRD-PARTY.md 和 licenses/。
+- `python -m unittest discover -s tests -p test_browser_login.py`
+- `python -m unittest discover -s tests -p test_plugin_updates.py`
+- `python -m unittest discover -s tests -p test_web_updates.py`
+- `node --test tests/cloud-sync.test.mjs`
+- `scripts/run-native-qa.ps1 -KritaRunner <kritarunner.com> -Suite run_loading_qa`
+- `tests/test_updater.ps1`
+- `tests/test_full_setup.ps1 -Setup <Setup.exe> -OutputDirectory <新的测试目录>`
+
+第三方资源说明见 `THIRD-PARTY.md` 和 `licenses/`。

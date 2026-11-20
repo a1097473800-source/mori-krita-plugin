@@ -3,5 +3,6 @@ __pycache__/
 webview-host/build/
 releases/
 qa-output/
+qa/
 .DS_Store
 prerequisites/*.exe

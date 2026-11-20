@@ -154,6 +154,48 @@ class WebUpdateTests(unittest.TestCase):
             lowered = {key.lower() for key in headers}
             self.assertFalse(lowered.intersection(("cookie", "authorization", "x-mori-user", "x-mori-canvas")))
 
+    def browser_manager(self):
+        meta = {**metadata("20261120-browser-bundled", "0.4.12"), "canvasSyncVersion": 1, "browserLoginVersion": 1}
+        (self.bundled / "ui-release.json").write_text(json.dumps(meta))
+        return updates.WebUpdateManager(self.url, self.bundled, self.root / "cache", "0.4.15")
+
+    def test_cached_webpage_without_browser_login_cannot_override_bundled_login(self):
+        self.publish(meta={**metadata("20261120-cloud-no-browser", "0.3.7"), "canvasSyncVersion": 1})
+        old = self.manager.check().release
+        pointer = (self.manager.cache_root / "current.json").read_bytes()
+        manager = self.browser_manager()
+        self.assertEqual(manager.selected().root, self.bundled)
+        before = len(self.requests)
+        result = manager.check()
+        self.assertEqual(result.release.root, self.bundled)
+        self.assertIn("浏览器登录", result.message)
+        self.assertEqual(len(self.requests), before + 1)
+        self.assertEqual((manager.cache_root / "current.json").read_bytes(), pointer)
+        self.assertTrue(old.root.is_dir())
+
+    def test_browser_login_webpage_can_be_updated_and_reused(self):
+        manager = self.browser_manager()
+        meta = {**metadata("20261120-browser-new", "0.4.12"), "canvasSyncVersion": 1, "browserLoginVersion": 1}
+        self.publish(meta=meta)
+        result = manager.check()
+        self.assertTrue(result.updated)
+        self.assertEqual(manager.selected(), result.release)
+        pointer = json.loads((manager.cache_root / "current.json").read_bytes())
+        self.assertEqual(pointer["browserLoginVersion"], 1)
+
+    def test_claimed_browser_login_contract_must_match_downloaded_bundle(self):
+        manager = self.browser_manager()
+        meta = {**metadata("20261120-browser-mismatch", "0.4.12"), "canvasSyncVersion": 1}
+        self.publish(payload=bundle(meta), meta={**meta, "browserLoginVersion": 1})
+        self.assertFalse(manager.check().updated)
+        self.assertFalse((manager.cache_root / "current.json").exists())
+
+    def test_browser_login_contract_rejects_invalid_values(self):
+        manager = self.browser_manager()
+        for value in (True, -1, "1"):
+            self.publish(meta={**metadata("20261120-browser-invalid", "0.4.12"), "canvasSyncVersion": 1, "browserLoginVersion": value})
+            self.assertFalse(manager.check().updated)
+
     def test_missing_channel_uses_bundled(self):
         result = self.manager.check()
         self.assertEqual(result.release.root, self.bundled)

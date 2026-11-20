@@ -21,6 +21,7 @@ from .webview import WebCanvas
 from .qt_lifetime import is_alive
 from .session_store import WindowsSessionStore
 from .version import VERSION
+from .branding import MoriLogo
 from .web_updates import WebUpdateManager
 from .plugin_updates import PluginUpdateManager, PluginUpdateResult, RELEASES_URL, release_url
 from .settings_dialog import SettingsDialog, SettingsEntry
@@ -135,7 +136,7 @@ class MoriDocker(DockWidget):
         self._title_layout = title_layout
         title_layout.setContentsMargins(10, 3, 8, 3)
         title_layout.setSpacing(7)
-        self._brand = QLabel("<span style='font-size:13px;font-weight:500;'>MORI</span>")
+        self._brand = MoriLogo(17)
         self._brand.setToolTip("Mori for Krita " + VERSION)
         title_layout.addWidget(self._brand)
         separator = QLabel("│")
@@ -253,6 +254,7 @@ class MoriDocker(DockWidget):
         self._web = WebCanvas(workbench)
         self._web.error.connect(self._status)
         self._web.ready.connect(self._web_ready)
+        self._web.restart_requested.connect(self._start)
         workbench_layout.addWidget(self._web, 1)
         self._pages.addWidget(workbench)
         layout.addWidget(self._pages, 1)
@@ -314,6 +316,8 @@ class MoriDocker(DockWidget):
             self._realtime.set_active(active and self._pages.currentIndex() == 0)
 
     def _set_mode(self, index):
+        if index == 0:
+            self._web.set_active(False)
         self._pages.setCurrentIndex(index)
         self._mode_actions[index].setChecked(True)
         self._mode_button.setText("实时模式" if index == 0 else "工作台")
@@ -420,9 +424,13 @@ class MoriDocker(DockWidget):
                 self._begin_web_update(gateway, open_after=True)
         except Exception as error:
             self._status("连接未完成：" + str(error))
+            if self._pages.currentIndex() == 1:
+                self._web._fail("工作台连接未完成，请重新打开工作台。")
 
     def _web_ready(self):
         self._status(self._web_update_message or "画布已打开。账号、积分和生成使用 Mori 服务器。")
+        if self._settings_dialog is not None and is_alive(self._settings_dialog):
+            self._settings_dialog.recovery_status.setText("工作台页面已加载，关闭设置即可查看。")
 
     def _automatic_update_check(self):
         if self._closing:
@@ -466,6 +474,7 @@ class MoriDocker(DockWidget):
             updates.releases_requested.connect(self._open_releases)
             updates.automatic_changed.connect(self._automatic_updates_changed)
             dialog.page_changed.connect(self._settings_page_changed)
+            dialog.recovery_requested.connect(self._recover)
             self._settings_dialog = dialog
         if page:
             self._settings_dialog.set_page(page)
@@ -477,6 +486,47 @@ class MoriDocker(DockWidget):
 
     def _show_updates(self):
         self._show_settings("updates")
+
+    def _recover(self, action):
+        if self._closing:
+            return
+        try:
+            if action == "page":
+                if not self._web.reload():
+                    self._web_started = False
+                self._set_mode(1)
+                message = "正在刷新工作台页面，关闭设置即可查看。"
+            elif action == "reconnect":
+                self._reconnect()
+                self._set_mode(1)
+                message = "正在重新连接工作台，关闭设置即可查看。"
+            elif action == "canvas":
+                # A manual display refresh must never submit a paid live task.
+                self._realtime_panel.live.setChecked(False)
+                document = Krita.instance().activeDocument()
+                if document:
+                    document.refreshProjection()
+                self._realtime.refresh()
+                self._settle_surface()
+                main = self.window()
+                main.update()
+                for child in main.findChildren(QWidget):
+                    if child.isVisible():
+                        child.update()
+                message = "画面与图层列表已刷新。"
+            elif action == "account":
+                self._realtime_panel.live.setChecked(False)
+                self._realtime.refresh_account()
+                if self._web_started:
+                    self._web.reload()
+                message = "正在刷新账号与积分。"
+            else:
+                return
+        except Exception as error:
+            message = "恢复未完成：" + str(error)
+        self._status(message)
+        if self._settings_dialog is not None and is_alive(self._settings_dialog):
+            self._settings_dialog.recovery_status.setText(message)
 
     def _settings_page_changed(self, page):
         if page == "updates" and self._plugin_update_result is None and not self._plugin_update_pending:
@@ -559,6 +609,8 @@ class MoriDocker(DockWidget):
         self._render_updates()
         if open_after:
             self._status(self._web_update_message)
+            if not self._web_started:
+                self._web.begin_loading("正在准备 Mori 工作台…")
         base = gateway.client.base_url
         bundled = Path(__file__).with_name("web")
         storage = Path(QStandardPaths.writableLocation(QStandardPaths.AppLocalDataLocation)) / "mori-krita" / "web-updates"
@@ -641,6 +693,8 @@ class MoriDocker(DockWidget):
         self._check_all_updates()
 
     def _reconnect(self):
+        if self._closing:
+            return
         self._realtime.connection_changed()
         if self._web_update_cancel is not None:
             self._web_update_cancel.set()
@@ -648,6 +702,7 @@ class MoriDocker(DockWidget):
         self._web_update_message = ""
         self._web_open_after_update = False
         self._web_update_available = False
+        self._web.begin_loading()
         self._web.stop()
         self._web_started = False
         old = self._gateway

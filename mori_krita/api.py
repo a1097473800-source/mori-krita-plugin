@@ -431,6 +431,25 @@ class MoriClient:
                 fork._snapshot_user = owner.user_id
                 return fork
 
+    def new_login_transport(self):
+        """A fresh, independent cookie jar for browser authorization only."""
+        return MoriClient(self.base_url, self.timeout, _proxy_config=self._proxy_config)
+
+    def adopt_login(self, channel, expected_version):
+        """Adopt verified cookies atomically; delayed browser sign-ins cannot switch accounts."""
+        with self._lock, channel._lock:
+            if (channel is self or self._snapshot_owner is not None or self.session_version != expected_version
+                    or channel.base_url != self.base_url or not channel.user_id
+                    or not any(cookie.name == "mori_session" for cookie in channel._cookies)):
+                raise MoriApiError("账号会话已改变，请重新发起浏览器登录", 401, "SESSION_CHANGED")
+            self.clear_session()
+            for cookie in channel._cookies:
+                self._cookies.set_cookie(copy.deepcopy(cookie))
+            self.user = copy.deepcopy(channel.user)
+            self.user_id = channel.user_id
+            self.auth_enabled = True
+            self._persist_session()
+
     def _url(self, path: str, media_only: bool = False) -> str:
         if not isinstance(path, str) or re.search(r"[\x00-\x20\\]", path):
             raise MoriApiError("请求地址无效", code="UNSAFE_URL")
@@ -475,12 +494,14 @@ class MoriClient:
         return result
 
     def _observe_session(self, route: str, status: int, data: bytes):
-        if route in ("/api/auth/login", "/api/auth/register", "/api/auth/session") and 200 <= status < 300:
+        if route in ("/api/auth/login", "/api/auth/register", "/api/auth/session", "/api/auth/desktop/poll") and 200 <= status < 300:
             try:
                 payload = json.loads(data)
             except (ValueError, UnicodeDecodeError):
                 return
             if isinstance(payload, dict):
+                if route == "/api/auth/desktop/poll" and payload.get("status") != "complete":
+                    return
                 user = payload.get("user")
                 next_user_id = user.get("id") if isinstance(user, dict) else None
                 if next_user_id != self.user_id:

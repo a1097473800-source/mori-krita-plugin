@@ -9,6 +9,37 @@ import test_gateway as fixture
 
 
 class CloudGatewayTests(unittest.TestCase):
+    def test_first_password_setup_stays_on_the_authenticated_website(self):
+        self.client.responses[("GET", "/api/account")] = {"profile": {"id": "alice", "hasPassword": False, "canSetPassword": True}}
+        response = self.gateway.handle("GET", "/api/account")
+        profile = json.loads(response[2])["profile"]
+        self.assertFalse(profile["canSetPassword"])
+        self.assertTrue(profile["passwordSetupOnWeb"])
+
+    def test_browser_login_capability_is_advertised_without_forwarding_embedded_google_redirects(self):
+        self.client.responses[("GET", "/api/auth/session")] = {"enabled": True, "user": self.client.user, "providers": {"google": True}}
+        response = self.gateway.handle("GET", "/api/auth/session")
+        self.assertEqual(json.loads(response[2])["providers"], {"google": False, "browserLogin": True})
+        with self.assertRaises(fixture.GatewayError):
+            self.gateway.handle("GET", "/api/auth/google/start")
+
+    def test_browser_status_uses_private_local_routes_with_attempt_scoped_cancellation(self):
+        attempt = "browser-attempt-123456"
+        from types import SimpleNamespace
+        cancelled = []
+        self.gateway._browser_login = SimpleNamespace(
+            start=lambda value: {"attemptId": value, "status": "starting"},
+            status=lambda value: {"attemptId": value, "status": "pending"},
+            cancel=lambda value=None: cancelled.append(value))
+        for action in ("start", "status", "cancel"):
+            response = self.gateway.handle("POST", "/krita/auth/browser/" + action, json.dumps({"attemptId": attempt}).encode())
+            self.assertEqual(response[0], 200)
+        self.assertEqual(cancelled, [attempt])
+        self.assertEqual(self.client.calls, [])
+        for action in ("start", "status", "cancel"):
+            with self.assertRaises(fixture.GatewayError):
+                self.gateway.handle("GET", "/krita/auth/browser/" + action)
+
     def setUp(self):
         self.fixture = fixture.GatewayTests(methodName="runTest")
         self.fixture.setUp()

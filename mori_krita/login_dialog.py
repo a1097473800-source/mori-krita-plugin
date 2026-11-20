@@ -6,6 +6,7 @@ from PyQt5.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel,
                             QLineEdit, QPushButton, QCheckBox)
 
 from .realtime_panel import MORI_STYLE, icon_button, set_dark_surface
+from .branding import MoriLogo
 
 
 class MoriLoginDialog(QDialog):
@@ -29,7 +30,7 @@ class MoriLoginDialog(QDialog):
         layout.setContentsMargins(28, 22, 28, 24)
         layout.setSpacing(10)
         header = QHBoxLayout()
-        brand = QLabel("MORI")
+        brand = MoriLogo(24)
         brand.setObjectName("LoginBrand")
         header.addWidget(brand)
         header.addStretch()
@@ -45,6 +46,14 @@ class MoriLoginDialog(QDialog):
         description.setProperty("role", "muted")
         layout.addWidget(description)
         layout.addSpacing(14)
+        self.browser_submit = QPushButton("通过浏览器登录（支持 Google）")
+        self.browser_submit.setMinimumHeight(42)
+        layout.addWidget(self.browser_submit)
+        browser_hint = QLabel("在系统浏览器中确认账号后，插件会自动完成登录。")
+        browser_hint.setWordWrap(True)
+        browser_hint.setProperty("role", "muted")
+        layout.addWidget(browser_hint)
+        layout.addWidget(QLabel("或使用 Mori 邮箱密码"))
         self.email = QLineEdit()
         self.email.setAccessibleName("Mori 账号邮箱")
         self.email.setPlaceholderText("输入账号邮箱")
@@ -85,7 +94,7 @@ class MoriLoginDialog(QDialog):
         self.email.setFocus()
 
     def set_busy(self, busy):
-        for widget in (self.email, self.password, self.submit, self.show_password):
+        for widget in (self.email, self.password, self.submit, self.show_password, self.browser_submit):
             widget.setEnabled(not busy)
         self.submit.setText("正在连接…" if busy else "登录")
 

@@ -102,6 +102,8 @@ internal static class HostLifecycleTests
         });
         foreach (string scenario in new[] { "close-initializing", "dispose-initializing", "close-navigation", "close-ready", "dispose-ready", "parent-close-ready", "parent-dispose-ready", "queued-focus-close", "closed-controller-parent" })
         {
+            string selection = Environment.GetEnvironmentVariable("MORI_HOST_QA_SCENARIO");
+            if (!String.IsNullOrEmpty(selection) && selection != scenario) continue;
             current = scenario;
             int before = failures.Count;
             bool ready = false, closed = false, timedOut = false, actionTaken = false;
@@ -146,6 +148,7 @@ internal static class HostLifecycleTests
             watchdog.Tick += delegate { watchdog.Stop(); timedOut = true; teardown(); };
             messages.Received = delegate(string line)
             {
+                File.AppendAllText(Path.Combine(root, "progress.txt"), scenario + ": " + line + Environment.NewLine);
                 if (line.Contains("\"closed\"")) closed = true;
                 if (line.Contains("\"error\"")) failures.Add(scenario + ": " + line);
                 if (line.Contains("\"ready\""))

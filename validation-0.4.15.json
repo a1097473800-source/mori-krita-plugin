@@ -1,0 +1,117 @@
+{
+  "version": "0.4.15",
+  "nativeQt": {
+    "test_workbench_loading": {
+      "passed": true,
+      "tests": 7,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "test_webview_lifecycle": {
+      "passed": true,
+      "tests": 10,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "test_docker_lifecycle": {
+      "passed": true,
+      "tests": 17,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "test_startup_visibility": {
+      "passed": true,
+      "tests": 7,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "test_settings_ui": {
+      "passed": true,
+      "tests": 14,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "passed": true
+  },
+  "browserLogin": {
+    "passed": true,
+    "httpCookieTests": 7,
+    "actualBrowserToKritaLoginVerified": true
+  },
+  "webUpdater": {
+    "passed": true,
+    "tests": 34,
+    "browserLoginCapabilityChecked": true
+  },
+  "compatibilityUpdater": {
+    "passed": true,
+    "assertions": 2034
+  },
+  "fullInstaller": {
+    "passed": true,
+    "assertions": 4228,
+    "installedFilesVerified": 4216,
+    "setupSelfTest": true,
+    "versions": {
+      "krita": "5.3.4.1",
+      "mori": "0.4.15",
+      "aiDiffusion": "1.49.0",
+      "visionTools": "2.2.0"
+    },
+    "build": "0.4.15-20261120-5c5d418a",
+    "existingUserDataPreserved": true,
+    "oldCacheRemoved": true,
+    "pluginsEnabled": [
+      "mori_krita",
+      "ai_diffusion",
+      "vision_tools"
+    ],
+    "installedKritaSignature": "Valid",
+    "realUserProfileModified": false
+  },
+  "packageSourceFilesMatch": {
+    "passed": true,
+    "pluginFiles": 72,
+    "upgradeAndFullInstallMatch": true
+  },
+  "websiteBackend": {
+    "testsPassed": 793,
+    "sourceCommit": "072f9bb5cc87699c02e541bb251940fa26067b1c"
+  },
+  "websiteCompletion": {
+    "sourceCommit": "c66e69c35c98d38eb848a699e5f1334b5e2cc760",
+    "published": true,
+    "successButtonHasNoNavigation": true
+  },
+  "unchangedLegacyTestIssues": {
+    "gateway": [
+      "test_auto_import_toggle_defers_delivery (test_gateway.GatewayTests.test_auto_import_toggle_defers_delivery)",
+      "test_batch_without_original_document_uses_one_new_document (test_gateway.GatewayTests.test_batch_without_original_document_uses_one_new_document)",
+      "test_canvas_library_migrates_legacy_default_without_rewriting_its_bytes (test_gateway.GatewayTests.test_canvas_library_migrates_legacy_default_without_rewriting_its_bytes)",
+      "test_canvas_revision_prevents_stale_overwrite (test_gateway.GatewayTests.test_canvas_revision_prevents_stale_overwrite)",
+      "test_canvas_revisions_mismatch_account_and_create_receipts_are_isolated (test_gateway.GatewayTests.test_canvas_revisions_mismatch_account_and_create_receipts_are_isolated)",
+      "test_canvas_state_is_account_and_server_scoped (test_gateway.GatewayTests.test_canvas_state_is_account_and_server_scoped)",
+      "test_community_tool_generation_keeps_frozen_krita_target_and_preview_is_read_only (test_gateway.GatewayTests.test_community_tool_generation_keeps_frozen_krita_target_and_preview_is_read_only)",
+      "test_current_session_results_import_once (test_gateway.GatewayTests.test_current_session_results_import_once)",
+      "test_explicit_new_canvas_reserves_server_id_but_never_writes_website_state (test_gateway.GatewayTests.test_explicit_new_canvas_reserves_server_id_but_never_writes_website_state)",
+      "test_failed_import_is_not_retried_on_every_poll (test_gateway.GatewayTests.test_failed_import_is_not_retried_on_every_poll)",
+      "test_failed_server_canvas_reservation_does_not_create_a_local_empty_document (test_gateway.GatewayTests.test_failed_server_canvas_reservation_does_not_create_a_local_empty_document)",
+      "test_new_image_actions_and_aesthetic_preview_import_to_frozen_krita_target (test_gateway.GatewayTests.test_new_image_actions_and_aesthetic_preview_import_to_frozen_krita_target)",
+      "test_remote_requests_and_read_caches_use_the_page_canvas (test_gateway.GatewayTests.test_remote_requests_and_read_caches_use_the_page_canvas)",
+      "test_same_request_id_keeps_original_document (test_gateway.GatewayTests.test_same_request_id_keeps_original_document)",
+      "test_target_is_frozen_when_user_switches_documents (test_gateway.GatewayTests.test_target_is_frozen_when_user_switches_documents)",
+      "test_uncertain_submission_can_be_recovered_by_request_id (test_gateway.GatewayTests.test_uncertain_submission_can_be_recovered_by_request_id)"
+    ],
+    "selectionController": [
+      "test_collapse_is_persisted_and_does_not_hide_the_small_bar (test_selection_controller.SelectionControllerTests.test_collapse_is_persisted_and_does_not_hide_the_small_bar)",
+      "test_release_reveals_only_after_settle_then_resumes_idle_fallback (test_selection_controller.SelectionControllerTests.test_release_reveals_only_after_settle_then_resumes_idle_fallback)"
+    ],
+    "matchedUnmodifiedBaseline": true
+  },
+  "realUserProfileModifiedByInstallerTest": false
+}
