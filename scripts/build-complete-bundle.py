@@ -14,6 +14,8 @@ import zipfile
 
 SOURCE = Path(__file__).resolve().parents[1]
 MAGIC = b'MORI-KRITA-SETUP1'
+AI_VERSION = '1.49.0'
+AI_SHA256 = 'a29cadbbdc6d7af06c56ac59615f98c81d974412be5ca0a94fce84a2e4fcebd1'
 
 
 def sha(path):
@@ -52,8 +54,7 @@ def main():
     version = re.search(r'^VERSION = \"([0-9.]+)\"$', (SOURCE / 'mori_krita/version.py').read_text(encoding='utf-8'), re.M).group(1)
     if not re.fullmatch(r'[0-9]{8}', args.build_date):
         raise ValueError('Build date must use YYYYMMDD.')
-    expected_ai = '7442d7dcad147e8dbdefcc36728113c9712574e6f22036b02460e218ff859c7e'
-    if sha(args.ai) != expected_ai:
+    if sha(args.ai) != AI_SHA256:
         raise ValueError('AI Diffusion checksum mismatch.')
     if not (stage / 'Krita/bin/krita.exe').is_file():
         raise ValueError('First extract the official signed Krita 5.3.4.1 installer to stage/Krita.')
@@ -79,6 +80,10 @@ def main():
     for item in (SOURCE / 'windowlayouts').glob('*.kwl'):
         copy(item, stage / 'Krita/share/krita/windowlayouts' / item.name)
     extract_plugin(args.ai, plugins, {'ai_diffusion', 'ai_diffusion.desktop'})
+    actual_ai = re.search(r'^__version__\s*=\s*"([0-9.]+)"',
+        (plugins / 'ai_diffusion/__init__.py').read_text(encoding='utf-8'), re.M)
+    if not actual_ai or actual_ai.group(1) != AI_VERSION:
+        raise ValueError('AI Diffusion version does not match the verified release.')
     extract_plugin(args.vision, plugins, {'vision_tools', 'vision_tools.desktop'})
     for name in ('ai_diffusion', 'vision_tools'):
         for action in (plugins / name).glob('*.action'):
@@ -102,14 +107,14 @@ def main():
         vision_license.write_bytes(urllib.request.urlopen(request, timeout=30).read())
     notice = '''Mori for Krita Windows x64 集成安装包
 
-组件：Krita 5.3.4.1、Mori {VERSION}、AI Diffusion 1.47.0、Vision Tools 2.2.0。
+组件：Krita 5.3.4.1、Mori {VERSION}、AI Diffusion {AI_VERSION}、Vision Tools 2.2.0。
 包含 Microsoft WebView2 x64 离线运行组件。
 
 双击安装程序，关闭正在运行的 Krita 后点击“安装”。完成后从桌面“Krita”打开。
 三个插件会自动启用。原有画笔、作品、账号与其他插件不会打包给其他电脑。
 安装包包含“Krita/share/krita/windowlayouts/Mori 工作台.kwl”布局预设；在 Krita 的“窗口 → 工作区/窗口布局”中选择“Mori 工作台”即可恢复 Mori 与 AI Diffusion 的并列停靠布局。
-Mori 启动时还会自动清理 AI Diffusion 的浮动和置顶状态，避免它覆盖其他插件页面。
-自动选区浮动栏已移除；可在工作台选择“Krita 选区”后点击“发送”。
+包含原生选区助手；也可在工作台选择“Krita 选区”后点击“发送”。
+保留云端画布同步与版本冲突保护。
 实时滑块为 0–100%，每步 5%，采用紫色轨道、白色圆点与短暂流光。
 
 安装软件与插件可离线完成。Mori 生成服务需要联网并登录自己的账号。
@@ -119,18 +124,20 @@ Vision Tools 自带的分割与修补模型已随其官方插件一起包含。
 上游与对应源码：
 Krita：https://download.kde.org/stable/krita/5.3.4.1/
 Krita source：https://invent.kde.org/graphics/krita/-/tree/v5.3.4.1
-AI Diffusion：https://github.com/Acly/krita-ai-diffusion/releases/tag/v1.47.0
+AI Diffusion：https://github.com/Acly/krita-ai-diffusion/releases/tag/v{AI_VERSION}
 Vision Tools：https://github.com/Acly/krita-vision-tools/releases/tag/v2.2.0
 Vision Tools 2.2.0 面向 Krita 5.3；3.0.0 不用于此集成包。
 许可证与第三方声明保留在软件内的 bundle-licenses 及 Krita 自带许可目录中。
 '''
-    notice = notice.replace('{VERSION}', version)
+    notice = notice.replace('{VERSION}', version).replace('{AI_VERSION}', AI_VERSION)
     notice += '''
 更新方式：
-工作台网页：在 Mori 模式菜单选择“检查工作台更新”，更新准备好后重连或下次打开工作台使用。
-Mori 插件：从下方发布页下载新版 Compatibility-Update.zip，退出 Krita 后完整解压，双击“更新已安装插件.cmd”，无需重装整个 Krita。
+点击 Mori 面板顶部“更新”，查看当前版本、最新版本、更新说明和下载入口。
+启动后自动在后台检查，发现新版本时持续显示“有更新”，也可手动重新检查。
+工作台网页通过官网校验后下载；网页已打开时，保存作品并重开 Krita 后生效。
+Mori 插件：在更新页下载新版 Compatibility-Update.zip，退出 Krita 后完整解压，双击“更新已安装插件.cmd”，无需重装整个 Krita。
 https://github.com/a1097473800-source/mori-krita-plugin/releases
-Mori 插件不会在运行中自动替换 Python 文件；“检查工作台更新”更新的是工作台网页。
+官网更新与下载：https://morinet.chat/krita-plugin/manifest.json
 
 实时画布：
 “开始”开启连续实时交互；“提交”按当前参数只生成一张，完成即停止。
@@ -140,10 +147,12 @@ Mori 插件不会在运行中自动替换 Python 文件；“检查工作台更�
     build = version + '-' + args.build_date + '-' + sha(SOURCE / 'mori_krita/__init__.py')[:8]
     manifest = {
         'product': 'MoriKrita', 'build': build,
-        'versions': {'krita': '5.3.4.1', 'mori': version, 'aiDiffusion': '1.47.0', 'visionTools': '2.2.0'},
+        'versions': {'krita': '5.3.4.1', 'mori': version, 'aiDiffusion': AI_VERSION, 'visionTools': '2.2.0'},
         'archives': {'aiDiffusion': sha(args.ai), 'visionTools': sha(args.vision)},
-        'selectionOverlayRemoved': True,
-        'updates': {'workbench': 'verified-online-manifest', 'nativePlugin': 'compatibility-update-package',
+        'selectionOverlayRemoved': False,
+        'selectionAssistantEnabled': True,
+        'updates': {'workbench': 'verified-online-manifest', 'nativePlugin': 'startup-check-with-manual-install',
+                    'pluginManifest': 'https://morinet.chat/krita-plugin/manifest.json',
                     'releasePage': 'https://github.com/a1097473800-source/mori-krita-plugin/releases'},
         'windowLayoutPreset': 'Mori 工作台.kwl',
         'files': [],
@@ -172,6 +181,7 @@ Mori 插件不会在运行中自动替换 Python 文件；“检查工作台更�
             package.write(path, path.relative_to(stage).as_posix())
     digest = sha(payload)
     source_cs = (SOURCE / 'bundle/Setup.cs').read_text(encoding='utf-8').replace('__PAYLOAD_SHA256__', digest)
+    source_cs = source_cs.replace('__MORI_VERSION__', version).replace('__AI_VERSION__', AI_VERSION)
     build_cs = stage.parent / 'MoriKritaSetup.generated.cs'
     build_cs.write_text(source_cs, encoding='utf-8-sig')
     stub = stage.parent / 'MoriKritaSetup.stub.exe'
