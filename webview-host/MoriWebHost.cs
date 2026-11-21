@@ -674,9 +674,12 @@ internal static class BrowserPolicy
         Uri uri;
         return userInitiated && Uri.TryCreate(value, UriKind.Absolute, out uri)
             && uri.Scheme == "https" && uri.IsDefaultPort && String.IsNullOrEmpty(uri.UserInfo)
-            && uri.Host.Equals("www.pinterest.com", StringComparison.OrdinalIgnoreCase)
-            && String.IsNullOrEmpty(uri.Query) && String.IsNullOrEmpty(uri.Fragment)
-            && Regex.IsMatch(uri.AbsolutePath, @"^/pin/[0-9]{1,30}/?$");
+            && String.IsNullOrEmpty(uri.Fragment)
+            && ((uri.Host.Equals("www.pinterest.com", StringComparison.OrdinalIgnoreCase)
+                 && String.IsNullOrEmpty(uri.Query)
+                 && Regex.IsMatch(uri.AbsolutePath, @"^/pin/[0-9]{1,30}/?$"))
+                || (uri.Host.Equals("sub2api.izhe.top", StringComparison.OrdinalIgnoreCase)
+                    && uri.AbsolutePath == "/register" && uri.Query == "?aff=YD38MU9RTR3K"));
     }
 
     internal static bool CanDownload(string value, string origin)

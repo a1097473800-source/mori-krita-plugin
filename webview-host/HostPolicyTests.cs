@@ -39,6 +39,11 @@ internal static class HostPolicyTests
 
             Check(BrowserPolicy.CanOpenExternal(pin, true), "trusted Pinterest original");
             Check(!BrowserPolicy.CanOpenExternal(pin, false), "scripted popup blocked");
+            const string apiService = "https://sub2api.izhe.top/register?aff=YD38MU9RTR3K";
+            Check(BrowserPolicy.CanOpenExternal(apiService, true), "user-selected API registration link");
+            Check(!BrowserPolicy.CanOpenExternal(apiService, false), "scripted API popup blocked");
+            foreach (string url in new[] { apiService.Replace("https:", "http:"), apiService.Replace("sub2api.izhe.top", "sub2api.izhe.top.evil.invalid"), apiService.Replace("sub2api.izhe.top", "user:pass@sub2api.izhe.top"), apiService.Replace("sub2api.izhe.top", "sub2api.izhe.top:444"), apiService + "&token=secret", apiService + "#extra", "https://sub2api.izhe.top/", "https://sub2api.izhe.top/register", "https://sub2api.izhe.top/register?aff=OTHER" })
+                Check(!BrowserPolicy.CanOpenExternal(url, true), "blocked noncanonical API link " + url);
             foreach (string url in new[] { "http://www.pinterest.com/pin/123/", "https://www.pinterest.com.evil.invalid/pin/123/", "https://www.pinterest.com:444/pin/123/", "https://user:pass@www.pinterest.com/pin/123/", "https://www.pinterest.com/", pin + "?token=secret", pin + "#extra", "file:///C:/Windows/notepad.exe", "javascript:alert(1)", "https://127.0.0.1/pin/123/" })
                 Check(!BrowserPolicy.CanOpenExternal(url, true), "blocked external URL " + url);
 
