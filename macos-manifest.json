@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "version": "0.4.12",
+  "platform": "darwin",
+  "releaseUrl": "https://github.com/a1097473800-source/mori-krita-plugin/releases/tag/v0.4.12-macos-beta1",
+  "package": {
+    "url": "https://github.com/a1097473800-source/mori-krita-plugin/releases/download/v0.4.12-macos-beta1/Mori-Krita-0.4.12-macOS-Plugin.zip",
+    "size": 24828215,
+    "sha256": "c628fff8dd68e3066897ad94af330ae835af0203f99bdb2b51c52b9b9115d114"
+  },
+  "notes": "Mac 测试版：支持 Apple 芯片与 Intel。系统 WebKit 工作台、独立设置、原图无损参考与 Mac 专用更新通道。安装器与桥接组件尚未取得 Apple Developer ID 签名与公证。"
+}
