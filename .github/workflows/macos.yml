@@ -5,6 +5,9 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+concurrency:
+  group: mori-macos-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   prepare:
     strategy:
@@ -39,7 +42,7 @@ jobs:
       - name: Exercise actual WebKit rendering
         run: python3 tests/mac_native_smoke.py
       - name: Run native Krita regressions
-        run: python3 scripts/run-macos-qa.py --krita build/krita.app --output build/native-qa
+        run: python3 scripts/run-macos-qa.py --krita build/krita.app --suite run_mac_qa --output build/native-qa
       - name: Build the Mac installer
         if: matrix.runner == 'macos-15'
         run: python3 scripts/build-macos-bundle.py --krita-dmg build/krita.dmg --output build/releases

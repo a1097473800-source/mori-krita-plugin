@@ -5,3 +5,5 @@ releases/
 qa-output/
 .DS_Store
 prerequisites/*.exe
+build/
+mori_krita/macos/
