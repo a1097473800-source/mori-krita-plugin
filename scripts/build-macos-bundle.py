@@ -30,8 +30,8 @@ def copy(source, target):
 def archive_folder(root, destination):
     with zipfile.ZipFile(destination, 'w', zipfile.ZIP_DEFLATED, compresslevel=6) as archive:
         for path in sorted(root.rglob('*')):
-            if path.is_file():
-                archive.write(path, path.relative_to(root).as_posix())
+            # Krita's official PluginImporter locates modules by directory entries.
+            archive.write(path, path.relative_to(root).as_posix())
 
 
 def main():

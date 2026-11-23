@@ -1,6 +1,8 @@
 """Exercise the packaged native installer in isolated Mac user directories."""
 import argparse
+import builtins
 import hashlib
+import importlib.util
 import json
 from pathlib import Path
 import subprocess
@@ -74,7 +76,32 @@ def main():
                   'officialKritaSignatureVerified': True, 'protectedFilesVerified': len(protected)}
         reports.append(report)
         print(json.dumps(report))
-    (args.output / 'summary.json').write_text(json.dumps({'passed': True, 'tests': reports}, indent=2))
+    # Use the unmodified import logic shipped in the verified official Krita app.
+    source = next(installed.rglob('plugin_importer.py'))
+    spec = importlib.util.spec_from_file_location('mori_official_importer_qa', source)
+    importer_module = importlib.util.module_from_spec(spec)
+    original_i18n = getattr(builtins, 'i18n', None)
+    builtins.i18n = lambda text: text
+    try:
+        spec.loader.exec_module(importer_module)
+        destination = args.output / 'plugin-import-中文'
+        destination.mkdir()
+        package = next((args.stage / 'disk').glob('*-macOS-Plugin.zip'))
+        imported = importer_module.PluginImporter(str(package), str(destination), lambda _: True).import_all()
+        assert {plugin['name'] for plugin in imported} == {'mori_krita', 'ai_diffusion'}
+        assert (destination / 'pykrita/mori_krita/macos/libMoriMac.dylib').is_file()
+        assert (destination / 'actions/ai_diffusion.action').is_file()
+        for digest, relative in manifest:
+            if relative.startswith('plugins/'):
+                assert sha(destination / 'pykrita' / relative[8:]) == digest, relative
+    finally:
+        if original_i18n is None:
+            del builtins.i18n
+        else:
+            builtins.i18n = original_i18n
+    (args.output / 'summary.json').write_text(json.dumps({'passed': True, 'tests': reports,
+        'officialPluginImporter': {'passed': True, 'plugins': sorted(plugin['name'] for plugin in imported),
+            'nativeBridgePreserved': True, 'actionFileImported': True}}, indent=2))
 
 
 if __name__ == '__main__':
