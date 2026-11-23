@@ -32,6 +32,39 @@ static NSString *RunInstall(NSString *resources, NSString *testRoot, void (^prog
     return nil;
 }
 
+@interface MoriInstallerCanvas : NSView
+@end
+@implementation MoriInstallerCanvas
+- (void)drawRect:(NSRect)dirtyRect {
+    [[NSColor colorWithRed:.13 green:.13 blue:.15 alpha:1] setFill];
+    NSRectFill(dirtyRect);
+    [[NSColor colorWithWhite:.23 alpha:1] setStroke];
+    NSBezierPath *line = [NSBezierPath bezierPath];
+    [line moveToPoint:NSMakePoint(36, 80)]; [line lineToPoint:NSMakePoint(584, 80)];
+    line.lineWidth = 1; [line stroke];
+}
+@end
+
+@interface MoriInstallButton : NSButton
+@end
+@implementation MoriInstallButton
+- (void)drawRect:(NSRect)dirtyRect {
+    NSColor *background = self.enabled ?
+        [NSColor colorWithRed:(self.highlighted ? .66 : .72) green:(self.highlighted ? .58 : .64) blue:.91 alpha:1] :
+        [NSColor colorWithWhite:.34 alpha:1];
+    [background setFill];
+    [[NSBezierPath bezierPathWithRoundedRect:NSInsetRect(self.bounds, 1, 1) xRadius:8 yRadius:8] fill];
+    NSMutableParagraphStyle *paragraph = [NSMutableParagraphStyle new];
+    paragraph.alignment = NSTextAlignmentCenter;
+    NSDictionary *attributes = @{NSFontAttributeName:[NSFont systemFontOfSize:13 weight:NSFontWeightSemibold],
+        NSForegroundColorAttributeName:[NSColor colorWithRed:.15 green:.12 blue:.20 alpha:1],
+        NSParagraphStyleAttributeName:paragraph};
+    CGFloat height = [self.title sizeWithAttributes:attributes].height;
+    [self.title drawInRect:NSMakeRect(0, (self.bounds.size.height - height) / 2, self.bounds.size.width, height)
+        withAttributes:attributes];
+}
+@end
+
 @interface MoriInstaller : NSObject <NSApplicationDelegate>
 @property(strong) NSWindow *window;
 @property(strong) NSTextField *status;
@@ -45,6 +78,7 @@ static NSString *RunInstall(NSString *resources, NSString *testRoot, void (^prog
 - (NSTextField *)text:(NSString *)value frame:(NSRect)frame size:(CGFloat)size color:(NSColor *)color {
     NSTextField *label = [NSTextField labelWithString:value];
     label.frame = frame; label.font = [NSFont systemFontOfSize:size]; label.textColor = color;
+    label.lineBreakMode = NSLineBreakByWordWrapping; label.maximumNumberOfLines = 0;
     [self.window.contentView addSubview:label]; return label;
 }
 - (void)applicationDidFinishLaunching:(NSNotification *)notification {
@@ -54,8 +88,11 @@ static NSString *RunInstall(NSString *resources, NSString *testRoot, void (^prog
     self.window.title = @"Mori for Krita · Mac 安装";
     self.window.appearance = [NSAppearance appearanceNamed:NSAppearanceNameDarkAqua];
     self.window.backgroundColor = [NSColor colorWithRed:.13 green:.13 blue:.15 alpha:1];
+    self.window.contentView = [[MoriInstallerCanvas alloc] initWithFrame:NSMakeRect(0, 0, 620, 440)];
     [self.window center];
     [self text:@"MORI" frame:NSMakeRect(36, 366, 500, 35) size:25 color:NSColor.whiteColor];
+    [self text:@"Mac 测试版" frame:NSMakeRect(492, 373, 100, 20) size:11
+        color:[NSColor colorWithRed:.72 green:.64 blue:.91 alpha:1]];
     [self text:@"让创作在 Mac 上继续" frame:NSMakeRect(36, 309, 540, 32) size:23 color:NSColor.whiteColor];
     [self text:@"Krita 5.3.4.1  ·  Mori __MORI_VERSION__  ·  AI Diffusion 1.49.0"
         frame:NSMakeRect(36, 269, 550, 27) size:13 color:[NSColor colorWithWhite:.70 alpha:1]];
@@ -68,10 +105,9 @@ static NSString *RunInstall(NSString *resources, NSString *testRoot, void (^prog
     self.progress.hidden = YES; [self.window.contentView addSubview:self.progress];
     [self text:@"Apple 芯片与 Intel  ·  macOS 12 或更新版本"
         frame:NSMakeRect(36, 37, 370, 21) size:11 color:[NSColor colorWithWhite:.5 alpha:1]];
-    self.button = [NSButton buttonWithTitle:@"安装" target:self action:@selector(install:)];
-    self.button.frame = NSMakeRect(462, 28, 122, 39);
-    self.button.bezelStyle = NSBezelStyleRounded;
-    self.button.bezelColor = [NSColor colorWithRed:.72 green:.64 blue:.91 alpha:1];
+    self.button = [[MoriInstallButton alloc] initWithFrame:NSMakeRect(462, 28, 122, 39)];
+    self.button.title = @"安装"; self.button.target = self; self.button.action = @selector(install:);
+    self.button.bordered = NO;
     self.button.keyEquivalent = @"\r";
     [self.window.contentView addSubview:self.button];
     [self.window makeKeyAndOrderFront:nil];
@@ -130,9 +166,13 @@ int main(int argc, const char **argv) {
         MoriInstaller *delegate = [MoriInstaller new]; NSApp.delegate = delegate;
         if (argc == 3 && !strcmp(argv[1], "--render-preview")) {
             [delegate applicationDidFinishLaunching:nil];
+            [[NSRunLoop currentRunLoop] runUntilDate:[NSDate dateWithTimeIntervalSinceNow:.2]];
             [delegate.window displayIfNeeded];
             NSView *view = delegate.window.contentView;
-            NSBitmapImageRep *bitmap = [view bitmapImageRepForCachingDisplayInRect:view.bounds];
+            NSBitmapImageRep *bitmap = [[NSBitmapImageRep alloc] initWithBitmapDataPlanes:NULL
+                pixelsWide:1240 pixelsHigh:880 bitsPerSample:8 samplesPerPixel:4 hasAlpha:YES
+                isPlanar:NO colorSpaceName:NSCalibratedRGBColorSpace bytesPerRow:0 bitsPerPixel:0];
+            bitmap.size = view.bounds.size;
             [view cacheDisplayInRect:view.bounds toBitmapImageRep:bitmap];
             NSData *data = [bitmap representationUsingType:NSBitmapImageFileTypePNG properties:@{}];
             return [data writeToFile:[NSString stringWithUTF8String:argv[2]] atomically:YES] ? 0 : 2;
