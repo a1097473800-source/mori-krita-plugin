@@ -80,6 +80,8 @@ if [[ -e "$app" ]]; then
 else
     ditto "$mount/krita.app" "$stage/krita.app"
     mv "$stage/krita.app" "$app"
+    # Mark the verified app immediately so a later plugin failure remains retryable.
+    printf '%s\n' "$app" > "$profile/Applications/MoriKrita/.mori-$version"
 fi
 hdiutil detach -quiet "$mount"
 mount=""
@@ -103,6 +105,10 @@ for name in mori_krita mori_krita.desktop ai_diffusion ai_diffusion.desktop; do
 done
 mkdir -p "$resource_root/actions" "$resource_root/windowlayouts"
 for action in "$stage/payload/actions/"*; do [[ ! -f "$action" ]] || cp -p "$action" "$resource_root/actions/"; done
+notices="$profile/Applications/MoriKrita/Notices-$version"
+mkdir -p "$notices"
+ditto "$stage/payload/licenses" "$notices/licenses"
+cp -p "$stage/payload/THIRD-PARTY.md" "$notices/THIRD-PARTY.md"
 # Enable only the supplied plugins, preserving all other preferences and sections.
 touch "$config"
 awk '

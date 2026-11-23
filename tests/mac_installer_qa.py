@@ -60,7 +60,7 @@ def main():
             elif relative.startswith('actions/'):
                 path = resource / relative
             else:
-                continue
+                path = profile / 'Applications/MoriKrita/Notices-0.4.12' / relative
             assert path.is_file() and sha(path) == digest, relative
             count += 1
         for path, digest in protected.items():
@@ -70,7 +70,7 @@ def main():
         if protected:
             assert 'KeepPreference=yes' in text and 'enable_unrelated=true' in text
         assert not (resource / 'pykrita/mori_krita/__pycache__/stale.pyc').exists()
-        report = {'passed': True, 'case': name, 'pluginFilesVerified': count,
+        report = {'passed': True, 'case': name, 'payloadFilesVerified': count,
                   'officialKritaSignatureVerified': True, 'protectedFilesVerified': len(protected)}
         reports.append(report)
         print(json.dumps(report))

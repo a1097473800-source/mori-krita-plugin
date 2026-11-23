@@ -277,7 +277,7 @@ class UpdatePage(QWidget):
         self.automatic.toggled.connect(self.automatic_changed.emit)
         automatic_row.addWidget(self.automatic)
         layout.addLayout(automatic_row)
-        instructions = ("下载后退出 Krita，在「工具 → 脚本 → 导入 Python 插件」中导入 Mac 更新包。" if sys.platform == "darwin" else
+        instructions = ("保存作品后导入 Mac 插件包，再退出并重开 Krita，使更新生效。" if sys.platform == "darwin" else
                         "下载后完整解压，退出 Krita，再运行「更新已安装插件.cmd」。")
         self.instructions = self.label(instructions, "UpdateInstructions")
         self.instructions.hide()

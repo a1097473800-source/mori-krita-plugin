@@ -51,6 +51,16 @@ class MacIntegrationTests(unittest.TestCase):
             session.clear(ORIGIN)
             self.assertEqual(vault, {})
 
+    def test_mac_update_fallback_uses_its_own_manifest(self):
+        manager = updates.PluginUpdateManager('https://morinet.chat', '0.4.12', platform='darwin')
+        manifest = {'schemaVersion': 1, 'version': '0.4.13', 'platform': 'darwin',
+            'releaseUrl': updates.RELEASES_URL + '/tag/v0.4.13',
+            'package': {'url': updates.RELEASES_URL + '/download/v0.4.13/Mori-Krita-0.4.13-macOS-Plugin.zip'}}
+        with mock.patch.object(manager, '_read', side_effect=[OSError('offline'), manifest]) as read:
+            result = manager.check()
+        self.assertTrue(result.checked and result.available)
+        self.assertEqual(read.call_args.args[0], updates.MAC_MANIFEST_FALLBACK)
+
     def test_keychain_unavailable_does_not_block_sign_in(self):
         from test_session_store import cookie, ORIGIN
         with mock.patch.object(store, 'keychain_read', side_effect=OSError('locked')), \

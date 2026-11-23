@@ -15,6 +15,7 @@ import urllib.request
 REPOSITORY = "a1097473800-source/mori-krita-plugin"
 RELEASES_URL = "https://github.com/" + REPOSITORY + "/releases"
 LATEST_API = "https://api.github.com/repos/" + REPOSITORY + "/releases/latest"
+MAC_MANIFEST_FALLBACK = "https://raw.githubusercontent.com/" + REPOSITORY + "/macos-release-channel/macos-manifest.json"
 MAX_METADATA_BYTES = 64 * 1024
 _VERSION = re.compile(r"(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\Z")
 
@@ -147,7 +148,12 @@ class PluginUpdateManager:
 
     def check(self, cancel=None):
         deadline = time.monotonic() + 12
-        for url, parse in ((self.manifest_url, self._manifest), (LATEST_API, self._github)):
+        channels = [(self.manifest_url, self._manifest)]
+        if self.platform == "darwin":
+            channels.append((MAC_MANIFEST_FALLBACK, self._manifest))
+        else:
+            channels.append((LATEST_API, self._github))
+        for url, parse in channels:
             try:
                 latest = parse(self._read(url, cancel, deadline))
                 available = version_tuple(latest.version) > version_tuple(self.current_version)

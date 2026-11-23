@@ -13,14 +13,14 @@ Mori 原生实时生成、选区助手、独立设置和工作台适配 macOS。
 安装器无需 Python、Xcode 或管理员权限。Krita 位于当前用户的 `Applications/MoriKrita`，插件安装到 Krita 的资源目录；现有 Mori 与 AI Diffusion 及配置先备份，保留其他插件、画笔和作品。
 已有 Krita 的用户可导入 `Mori-Krita-0.4.12-macOS-Plugin.zip`，在 Python 插件管理器启用 Mori 并重开。
 
-Mori 安装器和桥接组件使用本地签名，尚未取得 Apple Developer ID 签名与公证。如果系统阻止打开，应联系维护者取得正式签名版本，不要关闭系统安全保护。
+Mori 安装器和桥接组件使用本地签名，尚未取得 Apple Developer ID 签名与公证。首次打开如提示开发者无法验证，确认下载来源后，可在「系统设置 → 隐私与安全性」找到安装器并点击「仍要打开」；macOS 12 对应「系统偏好设置 → 安全性与隐私 → 通用」。操作见 [Apple 官方说明](https://support.apple.com/zh-cn/102445)。
 Vision Tools 2.2.0 官方未提供 Mac 包，未随此包安装。AI Diffusion 的生成后端及模型仍需在其设置中配置。
 
 ## Mac 适配
 
 - 使用系统 WebKit，在 Krita 的原生 Qt 面板内显示工作台，无需 WebView2、Qt WebEngine 或额外 Python 模块。
 - 登录会话存入 Mac 钥匙串；读取失败时正常重新登录，不把密码写入文件。
-- 分离 Mac 插件更新渠道，拒绝向 Mac 提供 Windows 更新包。
+- 分离 Mac 插件更新渠道，官网不可用时读取独立的 GitHub Mac 发布清单，拒绝向 Mac 提供 Windows 更新包。
 - 参考图默认按原始尺寸无损上传，实时、工作台、选区共用偏好；结果继续等比放入原画布位置。
 - Mac 主机生命周期包含显示隐藏、调整大小、焦点及退出释放。
 
