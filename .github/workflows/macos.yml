@@ -1,0 +1,40 @@
+name: Mori macOS build
+on:
+  push:
+    branches: [feat/macos-0.4.12]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  prepare:
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [macos-15, macos-15-intel]
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inspect official Krita runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build
+          curl --fail --location --retry 3 --output build/krita.dmg https://download.kde.org/stable/krita/5.3.4.1/krita-5.3.4.1-signed.dmg
+          echo '531e261da1fd8d5c468cfcd4eebd16e9edf6ab320e89406d2875f2e43c1148de  build/krita.dmg' | shasum -a 256 --check
+          hdiutil attach -quiet -nobrowse -readonly -mountpoint "$PWD/build/krita-volume" build/krita.dmg
+          ditto build/krita-volume/krita.app build/krita.app
+          hdiutil detach -quiet "$PWD/build/krita-volume"
+          {
+            sw_vers
+            uname -m
+            file build/krita.app/Contents/MacOS/*
+            find build/krita.app/Contents -name '*python*' -maxdepth 5
+            /usr/libexec/PlistBuddy -c 'Print :LSMinimumSystemVersion' build/krita.app/Contents/Info.plist || true
+            xcrun --show-sdk-path
+          } > build/runtime.txt
+          cat build/runtime.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mac-preflight-${{ matrix.runner }}
+          path: build/runtime.txt
