@@ -82,9 +82,12 @@ def main():
         copy(source, stage / 'payload/actions' / source.name)
     (stage / 'payload/actions').mkdir(exist_ok=True)
     copy(ROOT / 'THIRD-PARTY.md', stage / 'payload/THIRD-PARTY.md')
+    copy(ROOT / 'THIRD-PARTY.md', plugin / 'THIRD-PARTY.md')
     for source in (ROOT / 'licenses').iterdir():
         if source.is_file():
             copy(source, stage / 'payload/licenses' / source.name)
+            # Krita's ZIP importer installs module trees, so notices travel with Mori.
+            copy(source, plugin / 'licenses' / source.name)
     copy(stage / 'payload/plugins/ai_diffusion/LICENSE', stage / 'payload/licenses/AI-Diffusion-LICENSE.txt')
     files = []
     for source in sorted((stage / 'payload').rglob('*')):
