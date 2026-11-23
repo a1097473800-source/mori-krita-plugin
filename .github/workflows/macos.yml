@@ -34,7 +34,18 @@ jobs:
             xcrun --show-sdk-path
           } > build/runtime.txt
           cat build/runtime.txt
+      - name: Build universal native bridge
+        run: python3 scripts/build-macos-native.py
+      - name: Exercise actual WebKit rendering
+        run: python3 tests/mac_native_smoke.py
+      - name: Run native Krita regressions
+        run: python3 scripts/run-macos-qa.py --krita build/krita.app --output build/native-qa
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
-          name: mac-preflight-${{ matrix.runner }}
-          path: build/runtime.txt
+          name: mac-qa-${{ matrix.runner }}
+          path: |
+            build/runtime.txt
+            build/native-qa
+            mori_krita/macos/libMoriMac.dylib
+            mori_krita/macos/host-release.json

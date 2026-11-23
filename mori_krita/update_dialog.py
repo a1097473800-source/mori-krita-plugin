@@ -1,5 +1,6 @@
 """Update content and controls embedded in the Mori settings window."""
 import re
+import sys
 
 from PyQt5.QtCore import QRectF, QSize, Qt, QTimer, pyqtSignal
 from PyQt5.QtGui import QColor, QIcon, QPainter, QPainterPath, QPen, QPixmap
@@ -276,7 +277,9 @@ class UpdatePage(QWidget):
         self.automatic.toggled.connect(self.automatic_changed.emit)
         automatic_row.addWidget(self.automatic)
         layout.addLayout(automatic_row)
-        self.instructions = self.label("下载后完整解压，退出 Krita，再运行「更新已安装插件.cmd」。", "UpdateInstructions")
+        instructions = ("下载后退出 Krita，在「工具 → 脚本 → 导入 Python 插件」中导入 Mac 更新包。" if sys.platform == "darwin" else
+                        "下载后完整解压，退出 Krita，再运行「更新已安装插件.cmd」。")
+        self.instructions = self.label(instructions, "UpdateInstructions")
         self.instructions.hide()
         layout.addSpacing(10)
         layout.addWidget(self.instructions)

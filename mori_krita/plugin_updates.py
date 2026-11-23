@@ -5,6 +5,7 @@ from dataclasses import dataclass
 import json
 import re
 import ssl
+import sys
 import time
 import urllib.error
 import urllib.parse
@@ -32,7 +33,7 @@ def release_url(value, *, package=False):
     prefix = "/" + REPOSITORY + "/releases"
     if (package and parsed.scheme == "https" and parsed.netloc == "morinet.chat"
             and not parsed.query and not parsed.fragment
-            and re.fullmatch(r"/krita-plugin/packages/Mori-Krita-[0-9]+\.[0-9]+\.[0-9]+-Compatibility-Update\.zip", parsed.path)):
+            and re.fullmatch(r"/krita-plugin/packages/Mori-Krita-[0-9]+\.[0-9]+\.[0-9]+-(?:Compatibility-Update|macOS-Plugin)\.zip", parsed.path)):
         return value
     if (parsed.scheme != "https" or parsed.netloc != "github.com" or parsed.query
             or parsed.fragment or not parsed.path.startswith(prefix + "/")
@@ -69,8 +70,9 @@ class _NoRedirect(urllib.request.HTTPRedirectHandler):
 
 
 class PluginUpdateManager:
-    def __init__(self, base_url, current_version):
+    def __init__(self, base_url, current_version, platform=None):
         self.current_version = current_version
+        self.platform = platform or sys.platform
         version_tuple(current_version)
         parsed = urllib.parse.urlsplit(base_url)
         if (not parsed.hostname or parsed.username or parsed.password or parsed.query or parsed.fragment
@@ -78,7 +80,7 @@ class PluginUpdateManager:
                 or (parsed.scheme != "https" and not (parsed.scheme == "http"
                     and parsed.hostname in ("127.0.0.1", "localhost", "::1")))):
             raise ValueError("更新服务器地址无效。")
-        self.manifest_url = base_url.rstrip("/") + "/krita-plugin/manifest.json"
+        self.manifest_url = base_url.rstrip("/") + ("/krita-plugin/macos-manifest.json" if self.platform == "darwin" else "/krita-plugin/manifest.json")
         self._opener = urllib.request.build_opener(_NoRedirect(),
             urllib.request.HTTPSHandler(context=ssl.create_default_context()))
 
@@ -108,8 +110,7 @@ class PluginUpdateManager:
             raise ValueError("更新信息无效。")
         return value
 
-    @staticmethod
-    def _manifest(value):
+    def _manifest(self, value):
         if type(value.get("schemaVersion")) is not int or value["schemaVersion"] != 1:
             raise ValueError("更新信息无效。")
         version = value.get("version")
@@ -117,13 +118,14 @@ class PluginUpdateManager:
         page = release_url(value.get("releaseUrl"))
         package = value.get("package") or {}
         download = release_url(package.get("url"), package=True) if package else ""
+        if self.platform == "darwin" and (value.get("platform") != "darwin" or not download.endswith("-macOS-Plugin.zip")):
+            raise ValueError("此更新包不适用于 macOS。")
         notes = value.get("notes", "")
         if not isinstance(notes, str):
             raise ValueError("更新说明无效。")
         return PluginRelease(version, page, download, notes[:6000])
 
-    @staticmethod
-    def _github(value):
+    def _github(self, value):
         if value.get("draft") is not False or value.get("prerelease") is not False:
             raise ValueError("尚无正式发布版本。")
         tag = value.get("tag_name", "")
@@ -132,9 +134,12 @@ class PluginUpdateManager:
         page = release_url(value.get("html_url"))
         download = ""
         for asset in value.get("assets", []):
-            if isinstance(asset, dict) and asset.get("name") == "Mori-Krita-" + version + "-Compatibility-Update.zip":
+            suffix = "-macOS-Plugin.zip" if self.platform == "darwin" else "-Compatibility-Update.zip"
+            if isinstance(asset, dict) and asset.get("name") == "Mori-Krita-" + version + suffix:
                 download = release_url(asset.get("browser_download_url"), package=True)
                 break
+        if self.platform == "darwin" and not download:
+            raise ValueError("此版本尚未发布 Mac 更新包。")
         notes = value.get("body") or ""
         if not isinstance(notes, str):
             raise ValueError("更新说明无效。")

@@ -1,4 +1,4 @@
-"""Windows WebView2 child-process container; no Qt WebEngine dependency."""
+"""Native WebView2 on Windows and embedded WebKit on macOS."""
 from __future__ import annotations
 
 import json
@@ -28,6 +28,7 @@ class WebCanvas(QWidget):
         self.setStyleSheet("background:#1c1c20; border:0;")
         self._closed = False
         self._process = None
+        self._mac_host = None
         self._profile = None
         self._buffer = b""
         self._config = None
@@ -88,8 +89,10 @@ class WebCanvas(QWidget):
         if not valid_url:
             self._fail("画布只能连接插件提供的本机桥接地址。")
             return False
+        if sys.platform == "darwin":
+            return self._start_mac(url)
         if sys.platform != "win32":
-            self._fail("当前插件版本仅支持 Windows x64。")
+            self._fail("当前插件支持 Windows 和 macOS。")
             return False
         executable = Path(__file__).with_name("webview-host") / "MoriWebHost.exe"
         if not executable.is_file():
@@ -123,6 +126,39 @@ class WebCanvas(QWidget):
         self._timeout.start(30000)
         return True
 
+    def _start_mac(self, url):
+        from .macos_native import MacWebHost
+        self._stop(clear_pending=True)
+        self._stopping = False
+        self._was_ready = False
+        self._status.setText("正在启动 Mori 画布…")
+        self._status.show()
+        try:
+            self._host.setAttribute(Qt.WA_NativeWindow)
+            self._host_parent.setVisible(self._active)
+            self._host.setVisible(self._active)
+            self._mac_host = MacWebHost(int(self._host.winId()), url, self._mac_event)
+            self._mac_host.set_visible(self._active)
+            self._timeout.start(30000)
+            return True
+        except (OSError, AttributeError) as error:
+            self._fail(str(error))
+            return False
+
+    def _mac_event(self, kind, message):
+        if self._closed or self._stopping or not is_alive(self):
+            return
+        if kind == "ready":
+            self._timeout.stop()
+            self._was_ready = True
+            self._status.hide()
+            self.ready.emit()
+        elif kind == "error":
+            self._timeout.stop()
+            self._fail(message)
+        elif kind == "notice":
+            self.error.emit(message)
+
     def set_active(self, active: bool):
         """Keep the external WebView host behind Krita's current page.
 
@@ -139,6 +175,8 @@ class WebCanvas(QWidget):
             self._host_parent.setVisible(self._active)
         if is_alive(self._host):
             self._host.setVisible(self._active)
+        if self._mac_host:
+            self._mac_host.set_visible(self._active)
         if changed and is_alive(self._process) and self._process.state() == QProcess.Running:
             self._send({"op": "visibility", "visible": self._active})
 
@@ -204,7 +242,7 @@ class WebCanvas(QWidget):
 
     def _load_timeout(self):
         if not self._closed and not self._was_ready and not self._stopping:
-            self._fail("画布启动超时，请检查本机桥接服务和 WebView2 Runtime。")
+            self._fail("画布启动超时，请重新打开工作台。" if sys.platform == "darwin" else "画布启动超时，请检查本机桥接服务和 WebView2 Runtime。")
             self.stop()
 
     def _finished(self, exit_code=0, exit_status=QProcess.NormalExit):
@@ -264,6 +302,15 @@ class WebCanvas(QWidget):
         self._stopping = True
         if is_alive(self._timeout):
             self._timeout.stop()
+        if self._mac_host:
+            host, self._mac_host = self._mac_host, None
+            host.close()
+            if is_alive(self._host):
+                self._host.hide()
+            if is_alive(self._host_parent):
+                self._host_parent.hide()
+            if not self._closed and is_alive(self):
+                self.stopped.emit()
         process = self._process
         if is_alive(process) and process.state() != QProcess.NotRunning:
             self._send({"op": "close"})
@@ -295,7 +342,12 @@ class WebCanvas(QWidget):
 
     def eventFilter(self, watched, event):
         if watched is self._host and event.type() == QEvent.FocusIn:
-            self._send({"op": "focus"})
+            if self._mac_host:
+                self._mac_host.focus()
+            else:
+                self._send({"op": "focus"})
+        elif watched is self._host and event.type() == QEvent.Resize and self._mac_host:
+            self._mac_host.resize()
         return super().eventFilter(watched, event)
 
     def focusInEvent(self, event):

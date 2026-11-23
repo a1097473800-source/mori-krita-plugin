@@ -399,7 +399,12 @@ class MoriDocker(DockWidget):
             raise RuntimeError("插件正在关闭")
         if self._gateway is None:
             base = self._settings.value("serverUrl", "https://morinet.chat", type=str)
-            client = MoriClient(base, session_store=WindowsSessionStore())
+            if sys.platform == "darwin":
+                from .mac_session_store import MacSessionStore
+                session_store = MacSessionStore()
+            else:
+                session_store = WindowsSessionStore()
+            client = MoriClient(base, session_store=session_store)
             storage = Path(QStandardPaths.writableLocation(QStandardPaths.AppLocalDataLocation)) / "mori-krita"
             gateway = MoriGateway(client, Path(__file__).with_name("web"), storage,
                                   lambda op, data: self._dispatch.invoke(op, {**data, "gateway_id": id(gateway)}),

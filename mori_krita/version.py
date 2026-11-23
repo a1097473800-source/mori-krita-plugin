@@ -1,3 +1,3 @@
 """Version of the loaded native plugin, visible in Krita's dock title."""
 
-VERSION = "0.4.11"
+VERSION = "0.4.12"
