@@ -40,6 +40,19 @@ jobs:
         run: python3 tests/mac_native_smoke.py
       - name: Run native Krita regressions
         run: python3 scripts/run-macos-qa.py --krita build/krita.app --output build/native-qa
+      - name: Build the Mac installer
+        if: matrix.runner == 'macos-15'
+        run: python3 scripts/build-macos-bundle.py --krita-dmg build/krita.dmg --output build/releases
+      - name: Verify actual installer and upgrade
+        if: matrix.runner == 'macos-15'
+        run: python3 tests/mac_installer_qa.py --stage build/mac-package-stage --output build/installer-qa
+      - name: Upload Mac installer
+        if: matrix.runner == 'macos-15'
+        uses: actions/upload-artifact@v4
+        with:
+          name: Mori-macOS-installer
+          path: build/releases
+          compression-level: 0
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -47,5 +60,6 @@ jobs:
           path: |
             build/runtime.txt
             build/native-qa
+            build/installer-qa
             mori_krita/macos/libMoriMac.dylib
             mori_krita/macos/host-release.json

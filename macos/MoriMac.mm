@@ -71,7 +71,8 @@ static BOOL MoriLocalURL(NSURL *url) {
     }
     // Blob exports belong to the current loopback origin. WebKit owns the bytes.
     NSString *prefix = [@"blob:" stringByAppendingString:self.origin.absoluteString];
-    if (action.shouldPerformDownload && [url.absoluteString hasPrefix:prefix]) {
+    if (action.shouldPerformDownload && ([url.absoluteString hasPrefix:prefix] ||
+            ([url.scheme isEqualToString:@"data"] && MoriSameOrigin(view.URL, self.origin)))) {
         decision(WKNavigationActionPolicyDownload);
         return;
     }
@@ -163,10 +164,23 @@ void *mori_web_create(void *parent, const char *url, MoriCallback callback) {
         config.preferences.javaScriptCanOpenWindowsAutomatically = NO;
         // Network subresources are confined to the bridge and image data/blob URLs.
         // The gateway proxies all account/media/API traffic, including remote inspiration.
-        NSString *rules = @"[{\"trigger\":{\"url-filter\":\".*\"},\"action\":{\"type\":\"block\"}},"
-            "{\"trigger\":{\"url-filter\":\"^http://127\\\\.0\\\\.0\\\\.1:PORT/\"},\"action\":{\"type\":\"ignore-previous-rules\"}},"
-            "{\"trigger\":{\"url-filter\":\"^(data:|blob:http://127\\\\.0\\\\.0\\\\.1:PORT/)\"},\"action\":{\"type\":\"ignore-previous-rules\"}}]";
-        rules = [rules stringByReplacingOccurrencesOfString:@"PORT" withString:address.port.stringValue];
+        NSString *port = address.port.stringValue;
+        NSArray *allowedPatterns = @[
+            [NSString stringWithFormat:@"^http://127[.]0[.]0[.]1:%@/", port],
+            @"^data:",
+            [NSString stringWithFormat:@"^blob:http://127[.]0[.]0[.]1:%@/", port]
+        ];
+        NSMutableArray *ruleObjects = [NSMutableArray arrayWithObject:
+            @{ @"trigger":@{@"url-filter":@".*"}, @"action":@{@"type":@"block"} }];
+        for (NSString *pattern in allowedPatterns) {
+            [ruleObjects addObject:@{@"trigger":@{@"url-filter":pattern},
+                                    @"action":@{@"type":@"ignore-previous-rules"}}];
+        }
+        [ruleObjects addObject:@{@"trigger":@{@"url-filter":@"^https://i[.]pinimg[.]com/[a-zA-Z0-9_./-]+$",
+                                             @"resource-type":@[@"image"]},
+                                @"action":@{@"type":@"ignore-previous-rules"}}];
+        NSString *rules = [[NSString alloc] initWithData:[NSJSONSerialization dataWithJSONObject:ruleObjects
+            options:0 error:nil] encoding:NSUTF8StringEncoding];
         host.view = [[WKWebView alloc] initWithFrame:container.bounds configuration:config];
         host.view.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
         host.view.navigationDelegate = host;
