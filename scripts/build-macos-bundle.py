@@ -63,7 +63,7 @@ def main():
     assert binary.exists()
     native = json.loads((plugin / 'macos/host-release.json').read_text())
     assert native['sha256'] == sha(binary)
-    subprocess.run(['lipo', '-verify_arch', 'arm64', 'x86_64', str(binary)], check=True)
+    subprocess.run(['lipo', str(binary), '-verify_arch', 'arm64', 'x86_64'], check=True)
     subprocess.run(['codesign', '--verify', '--strict', str(binary)], check=True)
     ai = output.parent / 'ai-diffusion.zip'
     if not ai.exists():

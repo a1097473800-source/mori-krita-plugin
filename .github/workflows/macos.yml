@@ -43,6 +43,9 @@ jobs:
         run: python3 tests/mac_native_smoke.py
       - name: Run native Krita regressions
         run: python3 scripts/run-macos-qa.py --krita build/krita.app --suite run_mac_qa --output build/native-qa
+      - name: Render Mac settings and panel layout
+        if: matrix.runner == 'macos-15'
+        run: python3 scripts/run-macos-qa.py --krita build/krita.app --suite render_update_ui --output build/ui-preview
       - name: Build the Mac installer
         if: matrix.runner == 'macos-15'
         run: python3 scripts/build-macos-bundle.py --krita-dmg build/krita.dmg --output build/releases
@@ -64,5 +67,6 @@ jobs:
             build/runtime.txt
             build/native-qa
             build/installer-qa
+            build/ui-preview
             mori_krita/macos/libMoriMac.dylib
             mori_krita/macos/host-release.json

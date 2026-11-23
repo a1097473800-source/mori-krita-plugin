@@ -128,6 +128,15 @@ int main(int argc, const char **argv) {
         }
         [NSApplication sharedApplication];
         MoriInstaller *delegate = [MoriInstaller new]; NSApp.delegate = delegate;
+        if (argc == 3 && !strcmp(argv[1], "--render-preview")) {
+            [delegate applicationDidFinishLaunching:nil];
+            [delegate.window displayIfNeeded];
+            NSView *view = delegate.window.contentView;
+            NSBitmapImageRep *bitmap = [view bitmapImageRepForCachingDisplayInRect:view.bounds];
+            [view cacheDisplayInRect:view.bounds toBitmapImageRep:bitmap];
+            NSData *data = [bitmap representationUsingType:NSBitmapImageFileTypePNG properties:@{}];
+            return [data writeToFile:[NSString stringWithUTF8String:argv[2]] atomically:YES] ? 0 : 2;
+        }
         [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular]; [NSApp run];
     }
     return 0;

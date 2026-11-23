@@ -20,6 +20,7 @@ def main():
     args.output.mkdir(parents=True, exist_ok=True)
     executable = args.stage / 'disk/安装 Mori.app/Contents/MacOS/MoriInstaller'
     resources = executable.parents[1] / 'Resources'
+    subprocess.run([str(executable), '--render-preview', str((args.output / 'installer-preview.png').resolve())], check=True, timeout=20)
     with zipfile.ZipFile(resources / 'plugins.zip') as archive:
         manifest = [line.split('\t', 1) for line in archive.read('files.sha256').decode().splitlines()]
     reports = []
