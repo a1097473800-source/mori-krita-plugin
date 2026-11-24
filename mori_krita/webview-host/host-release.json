@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "hostVersion": "0.4.15",
+  "hostVersion": "0.4.16",
   "shutdownProtocol": 2,
   "files": [
     {
       "name": "MoriWebHost.exe",
-      "size": 31232,
-      "sha256": "9b270c25bf0a6d2367b995e8acd2c32fd62b728a4b066c3a29d87a8ab06dc035"
+      "size": 32768,
+      "sha256": "dc371ccb754a598ac07d5e92e16d1a848201e0fb0dd9507012b046ef432360d6"
     },
     {
       "name": "Microsoft.Web.WebView2.Core.dll",

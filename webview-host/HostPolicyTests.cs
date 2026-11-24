@@ -47,6 +47,17 @@ internal static class HostPolicyTests
             foreach (string url in new[] { "http://www.pinterest.com/pin/123/", "https://www.pinterest.com.evil.invalid/pin/123/", "https://www.pinterest.com:444/pin/123/", "https://user:pass@www.pinterest.com/pin/123/", "https://www.pinterest.com/", pin + "?token=secret", pin + "#extra", "file:///C:/Windows/notepad.exe", "javascript:alert(1)", "https://127.0.0.1/pin/123/" })
                 Check(!BrowserPolicy.CanOpenExternal(url, true), "blocked external URL " + url);
 
+            const string purchase = "https://shop.example.com/shop/Mori?product=credits#purchase";
+            Check(BrowserPolicy.CanOpenPurchaseLink(purchase, true, purchase), "configured purchase button opens");
+            Check(!BrowserPolicy.CanOpenPurchaseLink(purchase, false, purchase), "scripted purchase popup blocked");
+            Check(!BrowserPolicy.CanOpenPurchaseLink(purchase, true, null), "missing purchase button blocked");
+            Check(!BrowserPolicy.CanOpenPurchaseLink(purchase, true, "not a URL"), "invalid purchase configuration blocked");
+            foreach (string url in new[] { purchase.Replace("shop.example.com", "other.example.com"), purchase.Replace("/shop/Mori", "/shop/Other"), purchase.Replace("credits", "other"), purchase.Replace("#purchase", "#other") })
+                Check(!BrowserPolicy.CanOpenPurchaseLink(url, true, purchase), "unconfigured purchase target blocked " + url);
+            foreach (string url in new[] { "http://shop.example.com/shop/Mori", "https://user:pass@shop.example.com/shop/Mori", "https://shop.example.com:444/shop/Mori", "https://localhost/shop/Mori", "https://127.0.0.1/shop/Mori", "https://[::1]/shop/Mori", "file:///C:/Windows/notepad.exe", "javascript:alert(1)", "data:text/html,test", "", "not a URL" })
+                Check(!BrowserPolicy.CanOpenPurchaseLink(url, true, url), "invalid purchase scheme or authority blocked " + url);
+            Check(!BrowserPolicy.CanOpenPurchaseLink(purchase + new string('x', 2000), true, purchase + new string('x', 2000)), "oversized purchase URL blocked");
+
             Check(BrowserPolicy.LocalBlob(blob, origin), "own blob");
             Check(BrowserPolicy.CanDownload(blob, origin), "local exported blob");
             Check(BrowserPolicy.CanDownload(origin + "/media/a123-1234.png", origin), "local original download");

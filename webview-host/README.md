@@ -27,6 +27,12 @@ alternate hosts and custom ports are not enabled for that domain. A user-initiat
 canonical Pinterest `/pin/ID/` source link opens in the default browser while the
 embedded canvas stays on the loopback origin.
 
+User-initiated redemption-code purchases also open in the default browser. The
+host reads the purchase anchor from the current local document and allows only
+that exact HTTPS URL, including its configured query and fragment. The document
+identity is checked again after the asynchronous read. This supports configurable
+shops without granting a shopping domain access inside the embedded canvas.
+
 PNG/JPEG/WebP, SVG, PSD, ZIP and project JSON exports use a native save dialog.
 The pinned SDK exposes no download `IsUserInitiated` flag, so a top-document
 listener reports trusted pointer or keyboard interactions on buttons and links.

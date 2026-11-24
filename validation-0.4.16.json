@@ -1,0 +1,78 @@
+{
+  "version": "0.4.16",
+  "date": "2026-11-24",
+  "passed": true,
+  "fix": "Open the configured redemption purchase link in the default browser after a user click.",
+  "userConfirmedLocalFix": true,
+  "hostPolicy": {
+    "passed": true,
+    "assertions": 104,
+    "external_requests": 0,
+    "dialogs_opened": 0
+  },
+  "updater": {
+    "passed": true,
+    "assertions": 2118,
+    "windowsPowerShell": "5.1.26100.9818",
+    "versions": [
+      "0.3.0",
+      "0.3.1",
+      "0.3.2",
+      "0.3.3",
+      "0.3.4",
+      "0.3.5",
+      "0.3.6",
+      "0.3.7",
+      "0.4.0",
+      "0.4.1",
+      "0.4.2",
+      "0.4.3",
+      "0.4.4",
+      "0.4.5",
+      "0.4.6",
+      "0.4.7",
+      "0.4.8",
+      "0.4.9",
+      "0.4.10",
+      "0.4.11",
+      "0.4.12",
+      "0.4.13",
+      "0.4.14",
+      "0.4.15",
+      "0.4.16"
+    ],
+    "userDataModified": false
+  },
+  "nativeIntegration": {
+    "passed": true,
+    "errors": [],
+    "modelsCalled": 0,
+    "remoteRequests": 0
+  },
+  "hostPresentation": {
+    "passed": true,
+    "ready": true,
+    "hiddenBeforeReady": true
+  },
+  "hostLifecycle": {
+    "passed": true,
+    "scenarios": 10,
+    "errors": []
+  },
+  "pluginUpdateTests": {
+    "passed": true,
+    "tests": 11
+  },
+  "webUpdateTests": {
+    "passed": true,
+    "tests": 34
+  },
+  "package": {
+    "name": "Mori-Krita-0.4.16-Compatibility-Update.zip",
+    "size": 19948859,
+    "sha256": "94a41f07e152d04e40cec68524c482984c7a8f325d26201b9c485d1520ffd0c9",
+    "zipCrcVerified": true,
+    "hostFilesVerified": 5
+  },
+  "fullInstallerRebuilt": false
+}

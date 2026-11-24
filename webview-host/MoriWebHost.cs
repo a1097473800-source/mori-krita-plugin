@@ -332,10 +332,32 @@ internal sealed class HostForm : Form
         return BrowserPolicy.SameOrigin(value, origin);
     }
 
-    private void OpenExternal(string value, bool userInitiated)
+    private async void OpenExternal(string value, bool userInitiated)
     {
-        if (closed || !BrowserPolicy.CanOpenExternal(value, userInitiated)) return;
-        try { Process.Start(new ProcessStartInfo(value) { UseShellExecute = true }); }
+        if (!BrowserAvailable || !userInitiated) return;
+        try
+        {
+            if (!BrowserPolicy.CanOpenExternal(value, true))
+            {
+                // Commerce links are configured by the server. Match the actual
+                // purchase button on our local page instead of trusting a whole
+                // shopping domain or enabling arbitrary external navigation.
+                CoreWebView2 core = coreView;
+                string documentNonce = navigationNonce;
+                if (core == null || !SameOrigin(core.Source)) return;
+                string result = await core.ExecuteScriptAsync(
+                    "(function(){var a=document.querySelector('a.personal-purchase-button[href],section[aria-label=\"兑换码兑换\"] a.mori-credit-text-button[target=\"_blank\"][href]');return a?a.href:null;})();");
+                if (!BrowserAvailable || coreView != core || navigationNonce != documentNonce
+                    || !SameOrigin(core.Source)) return;
+                string purchaseUrl = Program.Json.Deserialize<string>(result);
+                if (!BrowserPolicy.CanOpenPurchaseLink(value, true, purchaseUrl))
+                {
+                    Program.Send("notice", "此链接暂不支持在插件中打开，请使用浏览器访问。");
+                    return;
+                }
+            }
+            if (BrowserAvailable) Process.Start(new ProcessStartInfo(value) { UseShellExecute = true });
+        }
         catch (Exception) { Program.Send("notice", "无法打开默认浏览器，请稍后重试。"); }
     }
 
@@ -680,6 +702,17 @@ internal static class BrowserPolicy
                  && Regex.IsMatch(uri.AbsolutePath, @"^/pin/[0-9]{1,30}/?$"))
                 || (uri.Host.Equals("sub2api.izhe.top", StringComparison.OrdinalIgnoreCase)
                     && uri.AbsolutePath == "/register" && uri.Query == "?aff=YD38MU9RTR3K"));
+    }
+
+    internal static bool CanOpenPurchaseLink(string value, bool userInitiated, string purchaseUrl)
+    {
+        Uri uri, configured;
+        return userInitiated && !String.IsNullOrEmpty(value) && value.Length <= 2000
+            && Uri.TryCreate(value, UriKind.Absolute, out uri)
+            && uri.Scheme == "https" && uri.IsDefaultPort && String.IsNullOrEmpty(uri.UserInfo)
+            && !uri.IsLoopback && uri.HostNameType == UriHostNameType.Dns
+            && Uri.TryCreate(purchaseUrl, UriKind.Absolute, out configured)
+            && uri.AbsoluteUri.Equals(configured.AbsoluteUri, StringComparison.Ordinal);
     }
 
     internal static bool CanDownload(string value, string origin)

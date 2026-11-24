@@ -1,8 +1,13 @@
-# Mori for Krita 0.4.15
+# Mori for Krita 0.4.16
 
-支持系统浏览器 Google 登录，修复工作台空白和切换时的黑色窗口闪烁。
+修复「购买兑换码」点击无反应，使用系统默认浏览器打开当前配置的购买页面。
 
 ## 本次更新
+
+- 修复个人中心「购买兑换码」外链被内嵌浏览器拦截的问题。仅打开用户主动点击且与当前购买按钮一致的 HTTPS 地址。
+- 配套 WebView2 宿主更新到 0.4.16，同时保留 Pinterest 和 API 服务外链支持。
+
+## 已有功能
 
 - 原生登录窗口和工作台均提供「通过浏览器登录（支持 Google）」。在浏览器确认后，插件自动使用原账号登录，保留积分和画布。
 - 浏览器授权完成页保留原按钮样式，显示「授权成功」和「请返回 Krita 继续创作」，按钮不跳转网站。配套云端登录服务已经上线。
@@ -17,11 +22,12 @@
 
 首次安装：下载 `Mori-Krita-0.4.15-Windows-x64-Setup.exe`，保存作品并退出 Krita，然后运行安装程序。
 完整包包含 Krita 5.3.4.1、Mori 0.4.15、AI Diffusion 1.49.0、Vision Tools 2.2.0 和 WebView2 离线运行组件。
+首次安装后，再使用本次 0.4.16 小更新包升级 Mori 插件。
 
-已安装 Mori 0.3.0–0.4.15 的 Windows 用户：
+已安装 Mori 0.3.0–0.4.16 的 Windows 用户：
 
 1. 保存作品，完全退出 Krita。
-2. 完整解压 `Mori-Krita-0.4.15-Compatibility-Update.zip`。
+2. 完整解压 `Mori-Krita-0.4.16-Compatibility-Update.zip`。
 3. 双击「更新已安装插件.cmd」。
 4. 重开 Krita，在「设置 → 更新与版本」核对版本。
 
@@ -35,7 +41,7 @@
 
 工作台使用 `bridgeMinVersion: 0.4.12`、`canvasSyncVersion: 1` 和 `browserLoginVersion: 1`。
 网站工程由独立私有仓库维护，随包网页的源码版本和校验值见 `web-ui/build-reference.json`。
-插件使用已验证的 WebView2 宿主 0.4.14；宿主和插件版本独立校验。
+插件使用已验证的 WebView2 宿主 0.4.16；宿主和插件版本独立校验。
 
 运行验证：
 
