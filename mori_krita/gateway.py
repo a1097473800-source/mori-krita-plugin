@@ -713,7 +713,7 @@ class MoriGateway:
             (r"/api/community/(?:preview|publish|share)", ("POST",)),
             (r"/api/community/items/" + ID + r"/(?:import|revoke)", ("POST",)),
             (r"/api/community/items/" + ID + r"/(?:tool-preview|run)", ("POST",)),
-            (r"/api/aesthetic/styles/" + ID + r"/copy", ("POST",)),
+            (r"/api/aesthetic/styles/" + ID + r"/(?:build|copy)", ("POST",)),
             (r"/api/tool-library/capabilities", ("GET",)),
             (r"/api/tool-library/(?:cmf-analysis|design-analysis)", ("POST",)),
             (r"/api/tool-library/(?:cmf-analysis|design-analysis)/" + CANVAS_ID, ("GET",)),

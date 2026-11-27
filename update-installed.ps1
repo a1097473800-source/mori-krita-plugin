@@ -17,7 +17,7 @@ if (-not $destination.StartsWith($resourceRoot.TrimEnd('\') + '\', [System.Strin
 }
 $versionPattern = '(?m)^\s*VERSION\s*=\s*"([0-9]+\.[0-9]+\.[0-9]+)"\s*$'
 # Only the listed releases share the frontend/runtime contract of this small update.
-$supportedInstalledVersions = @('0.3.0','0.3.1','0.3.2','0.3.3','0.3.4','0.3.5','0.3.6','0.3.7','0.4.0','0.4.1','0.4.2','0.4.3','0.4.4','0.4.5','0.4.6','0.4.7','0.4.8','0.4.9','0.4.10','0.4.11','0.4.12','0.4.13','0.4.14','0.4.15','0.4.16')
+$supportedInstalledVersions = @('0.3.0','0.3.1','0.3.2','0.3.3','0.3.4','0.3.5','0.3.6','0.3.7','0.4.0','0.4.1','0.4.2','0.4.3','0.4.4','0.4.5','0.4.6','0.4.7','0.4.8','0.4.9','0.4.10','0.4.11','0.4.12','0.4.13','0.4.14','0.4.15','0.4.16','0.4.17')
 $sourceRoot = Join-Path $PSScriptRoot 'mori_krita'
 $layoutSource = Join-Path $PSScriptRoot 'windowlayouts\Mori 工作台.kwl'
 $layoutDestination = Join-Path $resourceRoot 'windowlayouts\Mori 工作台.kwl'
@@ -65,6 +65,8 @@ function Get-MoriUpdateReport {
     $mappingFile = Join-Path $Directory 'selection_edit.py'
     $geometryFile = Join-Path $Directory 'selection_geometry.py'
     $startupFile = Join-Path $Directory '__init__.py'
+    $registrationFile = Join-Path $Directory 'startup.py'
+    if (Test-Path -LiteralPath $registrationFile -PathType Leaf) { $startupFile = $registrationFile }
     $dockerFile = Join-Path $Directory 'docker.py'
     $composerFile = Join-Path $Directory 'selection_composer.py'
     $tasksFile = Join-Path $Directory 'selection_tasks.py'
@@ -174,7 +176,7 @@ if (-not $installedVersion.Success -or $installedVersion.Groups[1].Value -notin 
     throw ('这个更新只适用于Mori ' + ($supportedInstalledVersions -join '、') + '。其他版本请使用完整安装包。')
 }
 $sourceFiles = @(Get-ChildItem -LiteralPath $sourceRoot -File | Where-Object { $_.Extension -in '.py','.html' })
-foreach ($required in @('branding.py','browser_login.py','version.py','__init__.py','docker.py','selection_composer.py','selection_controller.py','selection_geometry.py','qt_lifetime.py','krita_bridge.py','selection_edit.py','selection_tasks.py','gateway.py','api.py','web_updates.py','webview.py','realtime_panel.py','realtime_bridge.py','realtime_task.py','realtime_controller.py')) {
+foreach ($required in @('startup.py','native_loader.py','native_install.py','branding.py','browser_login.py','version.py','__init__.py','docker.py','selection_composer.py','selection_controller.py','selection_geometry.py','qt_lifetime.py','krita_bridge.py','selection_edit.py','selection_tasks.py','gateway.py','api.py','web_updates.py','webview.py','realtime_panel.py','realtime_bridge.py','realtime_task.py','realtime_controller.py')) {
     if (-not ($sourceFiles | Where-Object Name -EQ $required)) {
         throw ('兼容更新文件缺失：' + $required + '。原插件尚未更改。')
     }

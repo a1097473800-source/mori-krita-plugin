@@ -11,6 +11,7 @@ Get-ChildItem -LiteralPath (Join-Path $projectRoot 'mori_krita') -File |
     Where-Object { $_.Extension -in '.py','.html' } |
     Copy-Item -Destination (Join-Path $stage 'mori_krita')
 Copy-Item -LiteralPath (Join-Path $projectRoot 'mori_krita\web') -Destination (Join-Path $stage 'mori_krita') -Recurse
+Copy-Item -LiteralPath (Join-Path $projectRoot 'mori_krita\icons') -Destination (Join-Path $stage 'mori_krita') -Recurse
 Copy-Item -LiteralPath (Join-Path $projectRoot 'mori_krita\webview-host') -Destination (Join-Path $stage 'mori_krita') -Recurse
 Copy-Item -LiteralPath (Join-Path $projectRoot 'windowlayouts') -Destination $stage -Recurse
 foreach ($file in @('update-installed.ps1','更新已安装插件.cmd','检查安装.cmd','THIRD-PARTY.md')) {
@@ -28,9 +29,8 @@ Mori for Krita {VERSION} — 已安装用户小更新
 3. 重开 Krita，将鼠标移到 MORI 标题上，确认版本为 {VERSION}。
 
 本次更新：
-修复个人中心「购买兑换码」点击后无反应的问题。
-点击购买按钮后，使用系统默认浏览器打开当前配置的店铺地址。
-保留 Pinterest 和 API 服务外链支持；本次包含 WebView2 宿主 {VERSION}。
+修复创建审美风格时，点击「开始构建」提示接口不匹配的问题。
+从本版本起，在 Mori 设置的「更新与版本」点击「下载并安装」，可看到下载进度。下载完成后自动校验并安装，下次打开 Krita 时生效。
 
 0.4.15 更新：
 恢复“通过浏览器登录（支持 Google）”入口，修复旧网页缓存覆盖新版入口的问题。
@@ -52,7 +52,7 @@ Mori for Krita {VERSION} — 已安装用户小更新
 配套 Mori 网站登录接口已经上线；安装本包不会修改云端服务。
 
 暂停只停止后续生成，已经提交的任务会继续完成。
-本包使用 WebView2 宿主 {VERSION}；宿主版本与插件版本分别校验。
+本包使用 WebView2 宿主 0.4.16，宿主版本与插件版本分别校验。
 更新器会备份原插件、清理旧 Python 缓存并核对替换后的文件。
 账号、画布与已安装的微软 WebView2 运行时保留。
 “检查安装.cmd”只读检查实际路径与磁盘版本，Krita 运行时也可执行。

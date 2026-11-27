@@ -14,6 +14,7 @@ import urllib.request
 REPOSITORY = "a1097473800-source/mori-krita-plugin"
 RELEASES_URL = "https://github.com/" + REPOSITORY + "/releases"
 LATEST_API = "https://api.github.com/repos/" + REPOSITORY + "/releases/latest"
+OFFICIAL_MANIFEST = "https://morinet.chat/krita-plugin/manifest.json"
 MAX_METADATA_BYTES = 64 * 1024
 _VERSION = re.compile(r"(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\Z")
 
@@ -53,6 +54,8 @@ class PluginRelease:
     page_url: str
     download_url: str = ""
     notes: str = ""
+    sha256: str = ""
+    size: int = 0
 
 
 @dataclass(frozen=True)
@@ -120,7 +123,7 @@ class PluginUpdateManager:
         notes = value.get("notes", "")
         if not isinstance(notes, str):
             raise ValueError("更新说明无效。")
-        return PluginRelease(version, page, download, notes[:6000])
+        return PluginRelease(version, page, download, notes[:6000], package.get("sha256", ""), package.get("size", 0))
 
     @staticmethod
     def _github(value):
@@ -131,14 +134,39 @@ class PluginUpdateManager:
         version_tuple(version)
         page = release_url(value.get("html_url"))
         download = ""
+        digest, size = "", 0
         for asset in value.get("assets", []):
             if isinstance(asset, dict) and asset.get("name") == "Mori-Krita-" + version + "-Compatibility-Update.zip":
                 download = release_url(asset.get("browser_download_url"), package=True)
+                digest = (asset.get("digest") or "").removeprefix("sha256:")
+                size = asset.get("size", 0)
                 break
         notes = value.get("body") or ""
         if not isinstance(notes, str):
             raise ValueError("更新说明无效。")
-        return PluginRelease(version, page, download, notes[:6000])
+        return PluginRelease(version, page, download, notes[:6000], digest, size)
+
+    def installation_release(self, version, cancel):
+        """Executable packages always use metadata from the official channels."""
+        if version_tuple(version) <= version_tuple(self.current_version):
+            raise ValueError("只能安装比当前版本更新的插件。")
+        tag_api = LATEST_API.rsplit("/", 1)[0] + "/tags/v" + version
+        deadline = time.monotonic() + 16
+        filename = "Mori-Krita-" + version + "-Compatibility-Update.zip"
+        allowed = {"https://morinet.chat/krita-plugin/packages/" + filename,
+                   RELEASES_URL + "/download/v" + version + "/" + filename}
+        for url, parse in ((OFFICIAL_MANIFEST, self._manifest), (tag_api, self._github)):
+            try:
+                release = parse(self._read(url, cancel, deadline))
+                if (release.version == version and release.download_url in allowed
+                        and isinstance(release.sha256, str) and re.fullmatch(r"[0-9a-f]{64}", release.sha256)
+                        and type(release.size) is int and 0 < release.size <= 128 * 1024 * 1024):
+                    return release
+            except (ValueError, OSError, TypeError, AttributeError):
+                pass
+            if cancel.is_set():
+                break
+        raise ValueError("未取得此版本的官方更新包校验信息，请稍后重试。")
 
     def check(self, cancel=None):
         deadline = time.monotonic() + 12

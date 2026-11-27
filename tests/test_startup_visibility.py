@@ -77,7 +77,7 @@ class StartupVisibilityTests(unittest.TestCase):
         with mock.patch.object(krita.Krita, "instance", return_value=self.application), \
                 mock.patch.object(krita, "DockWidgetFactory", return_value=object()):
             spec.loader.exec_module(self.module)
-        self.helper = self.module._startup_visibility
+        self.helper = self.module.startup._startup_visibility
         self.addCleanup(self.helper._shutdown)
         self.addCleanup(lambda: sip.delete(self.helper) if not sip.isdeleted(self.helper) else None)
 

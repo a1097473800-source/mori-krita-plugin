@@ -28,14 +28,14 @@ Copy-Item -LiteralPath (Join-Path $project 'mori_krita\webview-host') -Destinati
 Copy-Item -LiteralPath (Join-Path $project 'windowlayouts') -Destination $package -Recurse
 $update = Join-Path $package 'update-installed.ps1'
 $version = [regex]::Match([IO.File]::ReadAllText((Join-Path $packagePlugin 'version.py')), 'VERSION = "([^"]+)"').Groups[1].Value
-Assert-MoriTest ($version -eq '0.4.16') 'Expected release fixture'
+Assert-MoriTest ($version -eq '0.4.17') 'Expected release fixture'
 foreach ($scriptName in @('update-installed.ps1','scripts\package-compat-update.ps1')) {
     $tokens=$null; $errors=$null
     $null=[Management.Automation.Language.Parser]::ParseFile((Join-Path $project $scriptName), [ref]$tokens, [ref]$errors)
     Assert-MoriTest ($errors.Count -eq 0) ('Windows PowerShell parser: ' + $scriptName)
 }
 $records = @()
-foreach ($oldVersion in @('0.3.0','0.3.1','0.3.2','0.3.3','0.3.4','0.3.5','0.3.6','0.3.7','0.4.0','0.4.1','0.4.2','0.4.3','0.4.4','0.4.5','0.4.6','0.4.7','0.4.8','0.4.9','0.4.10','0.4.11','0.4.12','0.4.13','0.4.14','0.4.15','0.4.16')) {
+foreach ($oldVersion in @('0.3.0','0.3.1','0.3.2','0.3.3','0.3.4','0.3.5','0.3.6','0.3.7','0.4.0','0.4.1','0.4.2','0.4.3','0.4.4','0.4.5','0.4.6','0.4.7','0.4.8','0.4.9','0.4.10','0.4.11','0.4.12','0.4.13','0.4.14','0.4.15','0.4.16','0.4.17')) {
     $resource = Join-Path $work ('资源-' + $oldVersion)
     $destination = Join-Path $resource 'pykrita\mori_krita'
     New-Item -ItemType Directory -Path $destination -Force | Out-Null

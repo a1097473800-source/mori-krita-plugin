@@ -158,3 +158,30 @@ class UpdateUiTests(unittest.TestCase):
         dialog.render(None, None, "内置网页", "离线", True, "")
         self.assertFalse(dialog.download.isEnabled())
         self.assertFalse(dialog.check.isEnabled())
+
+    def test_download_button_installs_once_reports_progress_and_can_retry(self):
+        self.capture_workers()
+        self.dock._plugin_update_result = self.result()
+        self.dock._plugin_release = self.dock._plugin_update_result.release
+        self.dock._show_updates()
+        page = self.dock._settings_dialog.updates
+        self.workers.clear()
+        page.download.click()
+        self.assertFalse(page.download.isEnabled())
+        self.dock._download_plugin_update()
+        self.assertEqual(len(self.workers), 1)
+        work, done = self.workers.pop()
+        with mock.patch.object(docker_module, "install_update", side_effect=ValueError("校验失败")):
+            work()
+        done()
+        self.assertTrue(page.download.isEnabled())
+        self.assertEqual(page.download.text(), "重试安装")
+        page.download.click()
+        work, done = self.workers.pop()
+        with mock.patch.object(docker_module, "install_update",
+                               side_effect=lambda manager, version, progress, cancel: progress("正在下载更新 50%")):
+            work()
+        self.assertIn("50%", page.native_status.text())
+        done()
+        self.assertIn("重启", page.download.text())
+        self.assertFalse(page.download.isEnabled())

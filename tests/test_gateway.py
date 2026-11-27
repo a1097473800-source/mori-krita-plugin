@@ -125,6 +125,7 @@ class GatewayTests(unittest.TestCase):
                   ("POST", "/api/community/share"), ("POST", "/api/community/items/item-1/import"),
                   ("POST", "/api/community/items/item-1/revoke"),
                   ("POST", "/api/aesthetic/styles/style-1/copy"),
+                  ("POST", "/api/aesthetic/styles/style-1/build"),
                   ("POST", "/api/tool-library/preview"),
                   ("POST", "/api/tool-library/drafts/draft-1/restore"),
                   ("POST", "/api/tool-library/tools/tool-1/preview"))

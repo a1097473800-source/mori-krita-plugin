@@ -24,6 +24,8 @@ from .version import VERSION
 from .branding import MoriLogo
 from .web_updates import WebUpdateManager
 from .plugin_updates import PluginUpdateManager, PluginUpdateResult, RELEASES_URL, release_url
+from .native_install import install_update
+from .native_loader import active_package, package_version
 from .settings_dialog import SettingsDialog, SettingsEntry
 from .realtime_panel import (RealtimePanel, MORI_STYLE, set_dark_surface, icon_button,
                              ui_icon, _CompactComboBox)
@@ -89,6 +91,8 @@ class GuiDispatch(QObject):
 
 
 class MoriDocker(DockWidget):
+    install_progress = pyqtSignal(str)
+
     def __init__(self):
         super().__init__()
         self.setObjectName("mori_krita")
@@ -112,6 +116,13 @@ class MoriDocker(DockWidget):
         self._plugin_update_cancel = None
         self._plugin_update_result = None
         self._plugin_release = None
+        self._install_cancel = None
+        self._install_message = ""
+        self._installed_version = ""
+        installed = package_version(active_package())
+        if installed != VERSION:
+            self._installed_version = installed
+        self.install_progress.connect(self._show_install_progress)
         self._settings_dialog = None
         self._update_checked_at = ""
         self._settings = QSettings("Mori", "KritaPlugin")
@@ -538,8 +549,39 @@ class MoriDocker(DockWidget):
 
     def _download_plugin_update(self):
         result = self._plugin_update_result
-        if result and result.available and self._plugin_release and self._plugin_release.download_url:
-            QDesktopServices.openUrl(QUrl(release_url(self._plugin_release.download_url, package=True)))
+        release = self._plugin_release
+        if (self._closing or self._install_cancel or not result or not result.available
+                or not release or not release.download_url or release.version == self._installed_version):
+            return
+        cancel = self._install_cancel = threading.Event()
+        self._install_message = "正在准备下载…"
+        self._render_updates()
+        errors = []
+
+        def download():
+            try:
+                manager = PluginUpdateManager("https://morinet.chat", VERSION)
+                install_update(manager, release.version, self.install_progress.emit, cancel)
+            except Exception as error:
+                errors.append(str(error))
+
+        def done():
+            if self._closing or self._install_cancel is not cancel:
+                return
+            self._install_cancel = None
+            if errors:
+                self._install_message = "安装未完成，可重试。" + errors[0]
+            else:
+                self._installed_version = release.version
+                self._install_message = ""
+            self._render_updates()
+
+        self._background(download, done)
+
+    def _show_install_progress(self, message):
+        if not self._closing and self._install_cancel:
+            self._install_message = message
+            self._render_updates()
 
     def _render_updates(self):
         if self._closing:
@@ -551,7 +593,8 @@ class MoriDocker(DockWidget):
             self._settings_dialog.set_update_available(available)
             self._settings_dialog.updates.render(self._plugin_update_result, self._plugin_release,
                 self._web_ui_version, self._web_update_message,
-                self._plugin_update_pending or self._web_update_pending, self._update_checked_at)
+                self._plugin_update_pending or self._web_update_pending, self._update_checked_at,
+                self._install_message, self._install_cancel is not None, self._installed_version)
 
     def _check_all_updates(self):
         if self._closing:
@@ -814,6 +857,8 @@ class MoriDocker(DockWidget):
         if self._closing:
             return
         self._closing = True
+        if self._install_cancel is not None:
+            self._install_cancel.set()
         if is_alive(self._update_timer):
             self._update_timer.stop()
         if self._plugin_update_cancel is not None:

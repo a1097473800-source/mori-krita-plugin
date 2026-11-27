@@ -276,7 +276,7 @@ class UpdatePage(QWidget):
         self.automatic.toggled.connect(self.automatic_changed.emit)
         automatic_row.addWidget(self.automatic)
         layout.addLayout(automatic_row)
-        self.instructions = self.label("下载后完整解压，退出 Krita，再运行「更新已安装插件.cmd」。", "UpdateInstructions")
+        self.instructions = self.label("插件会自动下载并安装，重启 Krita 后生效。", "UpdateInstructions")
         self.instructions.hide()
         layout.addSpacing(10)
         layout.addWidget(self.instructions)
@@ -286,7 +286,7 @@ class UpdatePage(QWidget):
         self.check.setCursor(Qt.PointingHandCursor)
         self.check.setProperty("variant", "primary")
         self.check.clicked.connect(self.check_requested.emit)
-        self.download = QPushButton("下载更新")
+        self.download = QPushButton("下载并安装")
         self.download.setCursor(Qt.PointingHandCursor)
         self.download.setProperty("variant", "primary")
         self.download.setEnabled(False)
@@ -304,7 +304,8 @@ class UpdatePage(QWidget):
         label.setTextInteractionFlags(Qt.TextSelectableByMouse)
         return label
 
-    def render(self, result, release, web_version, web_message, pending, checked_at):
+    def render(self, result, release, web_version, web_message, pending, checked_at,
+               install_message="", installing=False, installed_version=""):
         available = bool(result and result.available and release)
         failed = bool(result and not result.checked)
         if pending:
@@ -324,6 +325,13 @@ class UpdatePage(QWidget):
         message = result.message if result else "正在获取最新版本信息…" if pending else "检查 Mori 插件与工作台网页的新版本。"
         if release and release.version == self.current_version and not available and not failed and not pending:
             message = "插件已更新，继续专注你的下一次创作。"
+        staged = bool(installed_version and (not available or installed_version == release.version))
+        if staged:
+            self.heading.setText("更新已安装")
+            message = "Mori " + installed_version + " 将在下次启动 Krita 时生效。"
+        elif install_message:
+            self.heading.setText("正在更新 Mori" if installing else "更新未完成")
+            message = install_message
         self.native_status.setText(message)
         self.current.setText(self.current_version)
         self.latest.setText(release.version if release else "—")
@@ -331,11 +339,14 @@ class UpdatePage(QWidget):
         self.note_tag.setText("v" + release.version if release else "")
         self.notes.setPlainText(release.notes if release and release.notes else
             "打开完整更新记录，查看功能变化与历史版本。" if release else "检查后在这里查看本次更新内容。")
-        self.download.setEnabled(bool(available and release.download_url))
-        self.download.setVisible(bool(available and release.download_url))
-        self.instructions.setVisible(bool(available and release.download_url))
+        can_download = bool(available and release.download_url)
+        self.download.setText("已安装 · 待重启" if staged else "安装中…" if installing else
+                              "重试安装" if install_message else "下载并安装")
+        self.download.setEnabled(can_download and not installing and not staged)
+        self.download.setVisible(can_download or staged)
+        self.instructions.setVisible(can_download and not staged)
         self.check.setText("检查中…" if pending else "重新检查" if result else "检查更新")
-        self.check.setEnabled(not pending)
+        self.check.setEnabled(not pending and not installing)
         self.check.setProperty("variant", "secondary" if available and release.download_url else "primary")
         self.check.style().unpolish(self.check)
         self.check.style().polish(self.check)
